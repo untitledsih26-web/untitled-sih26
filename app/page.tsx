@@ -1,191 +1,330 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
+import { 
+  FileText, 
+  Search, 
+  ShieldCheck, 
+  Bot, 
+  UserCheck, 
+  ArrowRight, 
+  CheckCircle2, 
+  HelpCircle, 
+  Building2, 
+  FileCheck,
+  ChevronRight,
+  Sparkles
+} from 'lucide-react';
 
-export default function AppRouter() {
-  // This state controls which page we are looking at without needing Next.js folders
-  const [currentView, setCurrentView] = useState("landing");
-  
-  // Form State
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ name: "", dob: "", aadhaar: "", consent: false });
-  const [loading, setLoading] = useState(false);
+export default function Home() {
+  const [activeTab, setActiveTab] = useState<'services' | 'tracker' | 'ai' | 'admin'>('services');
+  const [appId, setAppId] = useState('');
+  const [statusResult, setStatusResult] = useState<null | { status: string; service: string; date: string }>(null);
+  const [chatQuery, setChatQuery] = useState('');
+  const [chatHistory, setChatHistory] = useState([
+    { sender: 'ai', text: 'Namaste! I am your Sarkar Seva AI Assistant. How can I help you with government schemes or document verification today?' }
+  ]);
 
-  // --- VIEW 1: LANDING PAGE ---
-  if (currentView === "landing") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
-        <header className="mb-12 text-center">
-          <div className="inline-flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200 mb-4">
-            <span className="bg-blue-600 text-white font-bold rounded px-2 py-0.5 text-xs">SIH 2026</span>
-            <span className="text-sm font-semibold text-gray-700">Sarkar Seva</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Unified Interoperability</h1>
-          <p className="text-gray-500 max-w-lg mx-auto">Select your portal role to continue to the dashboard.</p>
-        </header>
+  const handleTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appId) return;
+    setStatusResult({
+      status: 'In Review (Verification Pending)',
+      service: 'Aadhaar & Address Update',
+      date: '2026-03-28'
+    });
+  };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-          {/* Citizen Card */}
-          <button onClick={() => setCurrentView("user")} className="group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:border-blue-500 hover:shadow-md transition text-left">
-            <div className="bg-blue-50 p-3 w-12 h-12 flex items-center justify-center rounded-lg text-blue-600 mb-4 font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition">👤</div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Citizen Portal</h2>
-            <p className="text-sm text-gray-500">Apply for schemes, track status, and manage your digital consent.</p>
-          </button>
+  const handleSendChat = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatQuery.trim()) return;
+    const newHistory = [...chatHistory, { sender: 'user', text: chatQuery }];
+    setChatHistory(newHistory);
+    setChatQuery('');
+    setTimeout(() => {
+      setChatHistory(prev => [
+        ...prev,
+        { sender: 'ai', text: `I have processed your query regarding "${chatQuery}". For this request, you will need your verified ID and proof of residence. Would you like me to guide you through uploading them?` }
+      ]);
+    }, 800);
+  };
 
-          {/* Admin Card */}
-          <button onClick={() => setCurrentView("admin")} className="group bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:border-emerald-500 hover:shadow-md transition text-left">
-            <div className="bg-emerald-50 w-12 h-12 flex items-center justify-center p-3 rounded-lg text-emerald-600 mb-4 font-bold text-xl group-hover:bg-emerald-600 group-hover:text-white transition">🛡️</div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Department Admin</h2>
-            <p className="text-sm text-gray-500">Review AI-flagged applications and monitor cross-department APIs.</p>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // --- VIEW 2: CITIZEN FORM (Matches your Screenshots) ---
-  if (currentView === "user") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 md:p-8 font-sans text-black">
-        <header className="w-full max-w-2xl bg-white shadow-sm rounded-lg p-4 mb-6 flex justify-between items-center border-b border-gray-200">
-          <div className="flex items-center space-x-2">
-            <div className="bg-blue-600 text-white font-bold rounded-md px-3 py-1 text-sm">SIH 2026</div>
-            <h1 className="text-xl font-bold text-gray-800">Sarkar Seva</h1>
-          </div>
-          <button onClick={() => setCurrentView("landing")} className="text-xs bg-gray-100 text-gray-600 font-medium px-3 py-1 rounded hover:bg-gray-200">← Back Home</button>
-        </header>
-
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-          <div className="bg-white px-6 py-4 border-b flex justify-between items-center text-xs text-gray-500 font-medium">
-            <span className={step >= 1 ? "text-blue-600 font-bold" : ""}>1. Details</span>
-            <span>→</span>
-            <span className={step >= 2 ? "text-blue-600 font-bold" : ""}>2. Consent</span>
-            <span>→</span>
-            <span className={step === 3 ? "text-blue-600 font-bold" : ""}>3. Status</span>
-          </div>
-
-          {step === 1 && (
-            <div className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Housing Scheme Application</h2>
-              <p className="text-xs text-gray-500">Enter basic details once. System will auto-fetch records across departments.</p>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-gray-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth *</label>
-                <input type="text" value={formData.dob} onChange={(e) => setFormData({...formData, dob: e.target.value})} className="w-full p-2.5 border border-gray-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Aadhaar Identifier *</label>
-                <input type="text" value={formData.aadhaar} onChange={(e) => setFormData({...formData, aadhaar: e.target.value})} className="w-full p-2.5 border border-gray-800 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <button onClick={() => setStep(2)} className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm hover:bg-blue-700 transition">Next Step</button>
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Top Banner / Gov Header */}
+      <header className="bg-indigo-900 text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="bg-indigo-600 p-2 rounded-lg">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
-          )}
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Sarkar Seva</h1>
+              <p className="text-xs text-indigo-300">Unified Citizen Services & AI Governance Portal</p>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center space-x-4 text-sm">
+            <span className="bg-indigo-800 px-3 py-1 rounded-full text-indigo-200 border border-indigo-700">🇮🇳 Digital India</span>
+            <button 
+              onClick={() => setActiveTab('admin')}
+              className="text-indigo-200 hover:text-white transition flex items-center space-x-1"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Admin Login</span>
+            </button>
+          </div>
+        </div>
+      </header>
 
-          {step === 2 && (
-            <div className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Department Consent Gate</h2>
-              <div className="p-4 bg-blue-50 rounded-lg text-xs text-blue-900 space-y-2 border border-blue-100">
-                <p className="font-semibold">Automated Data Fetching Notice:</p>
-                <p>With your explicit consent, Sarkar Seva will securely query:</p>
-                <ul className="list-disc list-inside space-y-1 font-mono text-blue-800">
-                  <li>Land Records Department (Revenue)</li>
-                  <li>Income Department</li>
-                  <li>Identity Verification (Aadhaar Portal)</li>
-                </ul>
-              </div>
-              <label className="flex items-start space-x-3 cursor-pointer pt-2">
-                <input type="checkbox" checked={formData.consent} onChange={(e) => setFormData({...formData, consent: e.target.checked})} className="mt-0.5 h-4 w-4 text-blue-600 rounded" />
-                <span className="text-xs text-gray-600">I authorize Sarkar Seva to query linked databases via standardized APIs for application processing.</span>
-              </label>
-              <button onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); setStep(3); }, 1500); }} disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium text-sm hover:bg-blue-700 transition disabled:opacity-50">
-                {loading ? "Processing via AI Agents..." : "Submit & Auto-Verify"}
+      {/* Navigation Sub-bar */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 flex space-x-8 overflow-x-auto">
+          {[
+            { id: 'services', label: 'Citizen Services', icon: FileText },
+            { id: 'tracker', label: 'Track Application', icon: Search },
+            { id: 'ai', label: 'AI Assistant', icon: Bot },
+            { id: 'admin', label: 'Admin Dashboard', icon: UserCheck },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition whitespace-nowrap ${
+                  isActive 
+                    ? 'border-indigo-600 text-indigo-600' 
+                    : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
               </button>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="p-6 text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">✓</div>
-              <h2 className="text-xl font-bold text-gray-800">Application Submitted!</h2>
-              <p className="text-xs text-gray-500">Your application has been received and is being processed.</p>
-              <div className="bg-white p-4 rounded-lg border border-gray-800 text-left space-y-2">
-                <div className="text-xs text-gray-500">Application Number:</div>
-                <div className="text-base font-mono font-bold text-blue-600">HS-2025-01478</div>
-                <hr className="border-gray-200" />
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between"><span className="text-gray-500">Land Records:</span><span className="text-green-600 font-medium">Verified ✓</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Income Verification:</span><span className="text-green-600 font-medium">Verified ✓</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Current Status:</span><span className="text-amber-600 font-medium">Under Final Review</span></div>
-                </div>
-              </div>
-              <button onClick={() => setStep(1)} className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-lg font-medium text-xs hover:bg-gray-200 transition">Apply for Another Service</button>
-            </div>
-          )}
+            );
+          })}
         </div>
-      </div>
-    );
-  }
+      </nav>
 
-  // --- VIEW 3: ADMIN DASHBOARD ---
-  if (currentView === "admin") {
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-black">
-        <header className="mb-8 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Department Dashboard</h1>
-            <p className="text-sm text-gray-500">AI Validation & Interoperability Oversight</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium border border-green-200">🟢 LangGraph Agents: Online</span>
-            <button onClick={() => setCurrentView("landing")} className="text-sm bg-gray-100 text-gray-600 font-medium px-4 py-2 rounded-lg hover:bg-gray-200">Log Out</button>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100"><h2 className="font-semibold text-gray-800">Recent Interoperability Requests</h2></div>
-            <table className="w-full text-left text-sm text-gray-600">
-              <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500">
-                <tr><th className="px-6 py-3">App ID</th><th className="px-6 py-3">Applicant Name</th><th className="px-6 py-3">Service</th><th className="px-6 py-3">AI Status</th></tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                <tr className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-mono font-medium text-gray-900">HS-2025-01478</td><td className="px-6 py-4">Manya C R</td><td className="px-6 py-4">Housing Scheme</td>
-                  <td className="px-6 py-4"><span className="text-green-600 font-medium">✓ Data Cleared</span></td>
-                </tr>
-                <tr className="bg-red-50/30">
-                  <td className="px-6 py-4 font-mono font-medium text-gray-900">IC-2025-99212</td><td className="px-6 py-4">Ramesh Kumar</td><td className="px-6 py-4">Income Certificate</td>
-                  <td className="px-6 py-4"><span className="text-red-600 font-medium">⚠️ Anomaly Detected</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="font-semibold text-gray-800 mb-4 border-b pb-2">AI Validation Agent Flag</h2>
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-gray-700 space-y-3">
-              <p><strong className="text-gray-900">Issue: IC-2025-99212</strong></p>
-              <p>The system detected a name mismatch during cross-department API validation.</p>
-              <div className="space-y-2 mt-2">
-                <div className="flex justify-between bg-white p-2 rounded border border-red-100">
-                  <span className="text-xs text-gray-500">Revenue Dept Database:</span><span className="text-xs font-medium text-red-600">Ramesh K.</span>
-                </div>
-                <div className="flex justify-between bg-white p-2 rounded border border-gray-200">
-                  <span className="text-xs text-gray-500">Identity Portal Database:</span><span className="text-xs font-medium">Ramesh Kumar</span>
-                </div>
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* SERVICES TAB */}
+        {activeTab === 'services' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Hero Banner */}
+            <div className="bg-gradient-to-r from-indigo-700 to-blue-600 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="relative z-10 max-w-2xl">
+                <span className="bg-indigo-800 text-indigo-100 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center space-x-1 mb-4 border border-indigo-500">
+                  <Sparkles className="w-3.5 h-3.5 mr-1" /> AI-Powered Governance
+                </span>
+                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4">
+                  Fast, Transparent & Secure Government Services
+                </h2>
+                <p className="text-indigo-100 text-base mb-6">
+                  Apply for documents, check scheme eligibility, and get instant assistance without standing in long queues.
+                </p>
+                <button 
+                  onClick={() => setActiveTab('ai')}
+                  className="bg-white text-indigo-900 font-semibold px-6 py-3 rounded-xl shadow-md hover:bg-indigo-50 transition flex items-center space-x-2"
+                >
+                  <span>Chat with AI Assistant</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-              <div className="pt-4 flex space-x-2">
-                <button className="flex-1 bg-blue-600 text-white py-2 rounded-md font-medium text-xs hover:bg-blue-700">Approve Exception</button>
-                <button className="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-md font-medium text-xs hover:bg-gray-50">Reject</button>
+            </div>
+
+            {/* Service Cards Grid */}
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Popular Citizen Services</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { title: 'Aadhaar & ID Updates', desc: 'Update demographic details and download verified digital certificates.', icon: ShieldCheck },
+                  { title: 'Ration & Food Security', desc: 'Apply for family ration cards and track monthly entitlement distribution.', icon: FileCheck },
+                  { title: 'Pension & Welfare Schemes', desc: 'Check eligibility and apply for old age, widow, and disability pensions.', icon: FileText },
+                  { title: 'Grievance Redressal', desc: 'Lodge civic complaints and track resolution status in real-time.', icon: HelpCircle },
+                  { title: 'Income & Caste Certificates', desc: 'Instant verification and digital issuance of state revenue documents.', icon: Building2 },
+                  { title: 'AI Scheme Matcher', desc: 'Let AI analyze your profile and recommend eligible government schemes.', icon: Sparkles },
+                ].map((service, idx) => {
+                  const SIcon = service.icon;
+                  return (
+                    <div key={idx} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition group cursor-pointer">
+                      <div className="bg-indigo-50 w-12 h-12 rounded-lg flex items-center justify-center text-indigo-600 mb-4 group-hover:bg-indigo-600 group-hover:text-white transition">
+                        <SIcon className="w-6 h-6" />
+                      </div>
+                      <h4 className="font-semibold text-lg text-slate-800 mb-2">{service.title}</h4>
+                      <p className="text-slate-600 text-sm mb-4">{service.desc}</p>
+                      <div className="text-indigo-600 text-sm font-medium flex items-center space-x-1 group-hover:translate-x-1 transition">
+                        <span>Apply Now</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        )}
+
+        {/* TRACKER TAB */}
+        {activeTab === 'tracker' && (
+          <div className="max-w-xl mx-auto bg-white p-8 rounded-2xl border border-slate-200 shadow-sm animate-fadeIn">
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">Track Application Status</h3>
+            <p className="text-slate-600 text-sm mb-6">Enter your unique application reference ID below to check live status.</p>
+            
+            <form onSubmit={handleTrack} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Application ID / Reference Number</label>
+                <div className="flex space-x-2">
+                  <input 
+                    type="text" 
+                    value={appId}
+                    onChange={(e) => setAppId(e.target.value)}
+                    placeholder="e.g. SKR-2026-8941" 
+                    className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  />
+                  <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition">
+                    Search
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {statusResult && (
+              <div className="mt-8 p-6 bg-indigo-50 rounded-xl border border-indigo-100 animate-fadeIn">
+                <div className="flex items-center space-x-3 mb-4">
+                  <CheckCircle2 className="w-6 h-6 text-indigo-600" />
+                  <div>
+                    <h4 className="font-bold text-slate-800">{statusResult.service}</h4>
+                    <p className="text-xs text-slate-500">Submitted on: {statusResult.date}</p>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-indigo-200">
+                  <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Current Status</span>
+                  <p className="text-lg font-semibold text-slate-800 mt-1">{statusResult.status}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI ASSISTANT TAB */}
+        {activeTab === 'ai' && (
+          <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[600px] animate-fadeIn">
+            <div className="p-4 bg-indigo-900 text-white rounded-t-2xl flex items-center space-x-3">
+              <div className="bg-indigo-600 p-2 rounded-lg">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold">Sarkar Seva AI Support</h3>
+                <p className="text-xs text-indigo-300">Online • Ask questions in any regional language</p>
+              </div>
+            </div>
+
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50">
+              {chatHistory.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-md p-4 rounded-2xl text-sm ${
+                    msg.sender === 'user' 
+                      ? 'bg-indigo-600 text-white rounded-br-none' 
+                      : 'bg-white text-slate-800 shadow-sm border border-slate-200 rounded-bl-none'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-200 flex space-x-2">
+              <input 
+                type="text" 
+                value={chatQuery}
+                onChange={(e) => setChatQuery(e.target.value)}
+                placeholder="Ask about schemes, documents, or application steps..."
+                className="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-600 text-sm"
+              />
+              <button type="submit" className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition flex items-center space-x-1">
+                <span>Send</span>
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ADMIN DASHBOARD TAB */}
+        {activeTab === 'admin' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800">Admin Control Center</h3>
+                <p className="text-slate-600 text-sm">Overview of citizen applications and automated verifications.</p>
+              </div>
+              <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-200">
+                🟢 System Operational
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[
+                { label: 'Total Applications', value: '1,482', change: '+12% this week' },
+                { label: 'Pending Review', value: '143', change: 'Requires Attention' },
+                { label: 'AI Auto-Verified', value: '1,120', change: '84% success rate' },
+                { label: 'Active Schemes', value: '28', change: 'All active' },
+              ].map((stat, idx) => (
+                <div key={idx} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-slate-500 text-sm font-medium">{stat.label}</p>
+                  <p className="text-3xl font-extrabold text-slate-800 mt-2">{stat.value}</p>
+                  <p className="text-xs text-indigo-600 mt-2 font-medium">{stat.change}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+              <h4 className="font-bold text-slate-800 mb-4">Recent Citizen Submissions</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="pb-3 font-semibold">Reference ID</th>
+                      <th className="pb-3 font-semibold">Citizen Name</th>
+                      <th className="pb-3 font-semibold">Service Type</th>
+                      <th className="pb-3 font-semibold">Status</th>
+                      <th className="pb-3 font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {[
+                      { id: 'SKR-8941', name: 'Rahul Sharma', service: 'Aadhaar Update', status: 'Pending Review' },
+                      { id: 'SKR-8942', name: 'Priya Patel', service: 'Ration Card', status: 'Approved' },
+                      { id: 'SKR-8943', name: 'Amit Kumar', service: 'Old Age Pension', status: 'AI Verified' },
+                    ].map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-3 font-medium text-indigo-600">{row.id}</td>
+                        <td className="py-3 text-slate-800">{row.name}</td>
+                        <td className="py-3 text-slate-600">{row.service}</td>
+                        <td className="py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            row.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                            row.status === 'AI Verified' ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <button className="text-indigo-600 hover:text-indigo-800 font-medium">Review</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 mt-16 py-8 text-center text-slate-500 text-sm">
+        <p>© 2026 Sarkar Seva • Empowering Citizens with Next-Generation Governance</p>
+      </footer>
+    </div>
+  );
 }
