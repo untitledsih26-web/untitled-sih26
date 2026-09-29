@@ -1,38 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import {
-  Activity,
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  BadgeCheck,
-  BrainCircuit,
-  Building2,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Cpu,
-  FileCheck2,
-  Landmark,
-  Loader2,
-  Lock,
-  LogOut,
-  Mail,
-  Phone,
-  RefreshCw,
-  ShieldCheck,
-  UserRound,
-  Users,
-  X,
-  Zap,
+  Activity, AlertTriangle, ArrowLeft, ArrowRight, BadgeCheck, BrainCircuit, Building2,
+  CheckCircle2, Clock, Cpu, FileCheck2, Landmark, Loader2, Lock, LogOut, Mail, Phone,
+  RefreshCw, ShieldCheck, UserRound, X, Zap,
 } from "lucide-react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://sarkar-seva-demo.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "public-anon-fallback-key";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const IS_SUPABASE_CONFIGURED = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const IS_SUPABASE_CONFIGURED =
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
@@ -41,6 +21,7 @@ const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 type ViewKind = "landing" | "user" | "admin";
 type OtpChannel = "email" | "sms";
 type AgentStatus = "queued" | "running" | "success" | "error";
+type ConsentScope = "revenue" | "income" | "identity";
 
 const AGENT_PIPELINE = ["Request", "Routing", "Data", "Validation", "Consent", "Response", "Notifier"] as const;
 type AgentName = (typeof AGENT_PIPELINE)[number];
@@ -67,72 +48,28 @@ interface DataMismatch {
   sourceDepartment: string;
 }
 
-type AiStatus = "Cleared" | "Anomaly";
-type AdminDecision = "Approved Exception" | "Rejected";
-
 interface InteropRequest {
   appId: string;
   applicantName: string;
   service: string;
   departmentsQueried: string[];
-  aiStatus: AiStatus;
+  aiStatus: "Cleared" | "Anomaly";
   mismatches: DataMismatch[];
   receivedAt: string;
-  decision: AdminDecision | null;
+  decision: "Approved Exception" | "Rejected" | null;
 }
 
-const CONSENT_SCOPES = [
+const CONSENT_SCOPES: { key: ConsentScope; label: string; detail: string }[] = [
   { key: "revenue", label: "Revenue Department", detail: "Land, property & domicile records" },
   { key: "income", label: "Income Tax Department", detail: "Declared income & assessment records" },
   { key: "identity", label: "Identity Registry (UIDAI)", detail: "Demographic match only — no biometrics" },
-] as const;
+];
 
-const SEED_INTEROP_REQUESTS: InteropRequest[] = [
-  {
-    appId: "SS-2026-000871",
-    applicantName: "Rameshwar Yadav",
-    service: "Income Certificate",
-    departmentsQueried: ["Revenue", "Income Tax", "Identity"],
-    aiStatus: "Cleared",
-    mismatches: [],
-    receivedAt: "2026-09-29T09:14:00Z",
-    decision: null,
-  },
-  {
-    appId: "SS-2026-000872",
-    applicantName: "Meenakshi Sharma",
-    service: "Domicile Certificate",
-    departmentsQueried: ["Revenue", "Identity"],
-    aiStatus: "Anomaly",
-    mismatches: [
-      { field: "Date of Birth", expected: "1992-04-11", actual: "1992-04-01", sourceDepartment: "Identity Registry" },
-      { field: "Declared Income", expected: "₹4,80,000", actual: "₹6,20,000", sourceDepartment: "Income Tax" },
-    ],
-    receivedAt: "2026-09-29T09:31:00Z",
-    decision: null,
-  },
-  {
-    appId: "SS-2026-000873",
-    applicantName: "Aniket Kulkarni",
-    service: "Caste Validity Certificate",
-    departmentsQueried: ["Revenue", "Identity"],
-    aiStatus: "Cleared",
-    mismatches: [],
-    receivedAt: "2026-09-29T09:47:00Z",
-    decision: null,
-  },
-  {
-    appId: "SS-2026-000874",
-    applicantName: "Fatima Bano",
-    service: "Pension Eligibility Review",
-    departmentsQueried: ["Revenue", "Income Tax", "Identity"],
-    aiStatus: "Anomaly",
-    mismatches: [
-      { field: "Land Parcel Ownership", expected: "Hissa 12/2, Washim", actual: "No record found", sourceDepartment: "Revenue" },
-    ],
-    receivedAt: "2026-09-29T10:02:00Z",
-    decision: "Rejected",
-  },
+const SEED_REQUESTS: InteropRequest[] = [
+  { appId: "SS-2026-000871", applicantName: "Rameshwar Yadav", service: "Income Certificate", departmentsQueried: ["Revenue", "Income Tax", "Identity"], aiStatus: "Cleared", mismatches: [], receivedAt: "2026-09-29T09:14:00Z", decision: null },
+  { appId: "SS-2026-000872", applicantName: "Meenakshi Sharma", service: "Domicile Certificate", departmentsQueried: ["Revenue", "Identity"], aiStatus: "Anomaly", mismatches: [{ field: "Date of Birth", expected: "1992-04-11", actual: "1992-04-01", sourceDepartment: "Identity Registry" }, { field: "Declared Income", expected: "₹4,80,000", actual: "₹6,20,000", sourceDepartment: "Income Tax" }], receivedAt: "2026-09-29T09:31:00Z", decision: null },
+  { appId: "SS-2026-000873", applicantName: "Aniket Kulkarni", service: "Caste Validity Certificate", departmentsQueried: ["Revenue", "Identity"], aiStatus: "Cleared", mismatches: [], receivedAt: "2026-09-29T09:47:00Z", decision: null },
+  { appId: "SS-2026-000874", applicantName: "Fatima Bano", service: "Pension Eligibility Review", departmentsQueried: ["Revenue", "Income Tax", "Identity"], aiStatus: "Anomaly", mismatches: [{ field: "Land Parcel Ownership", expected: "Hissa 12/2, Washim", actual: "No record found", sourceDepartment: "Revenue" }], receivedAt: "2026-09-29T10:02:00Z", decision: "Rejected" },
 ];
 
 function useCountdown(active: boolean, seconds = 60): number {
@@ -184,6 +121,20 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
+function AiBadge({ status }: { status: "Cleared" | "Anomaly" }) {
+  const cleared = status === "Cleared";
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+      cleared
+        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+        : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+    }`}>
+      {cleared ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> : <AlertTriangle className="h-3.5 w-3.5" aria-hidden />}
+      {status}
+    </span>
+  );
+}
+
 function AuthPanel({ pendingRole, onDismiss }: { pendingRole: "user" | "admin" | null; onDismiss: () => void }) {
   const [channel, setChannel] = useState<OtpChannel>("email");
   const [destination, setDestination] = useState("");
@@ -195,12 +146,18 @@ function AuthPanel({ pendingRole, onDismiss }: { pendingRole: "user" | "admin" |
   const [cooldownActive, setCooldownActive] = useState(false);
   const remaining = useCountdown(cooldownActive, 60);
 
-const destinationValid =
+const trimmed = destination.trim();
+  const destinationValid =
     channel === "email"
-      ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destination.trim())
-      : /^\+?[1-9]\d{9,13}$/.test(destination.replace(/\s/g, ""));
-  const codeValid = /^\d{6}\$/.test(code.trim());
-  const maskedDestination = channel === "email" ? destination.trim() : destination.trim().slice(0, 3) + "••••" + destination.trim().slice(-3);
+      ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)
+      : /^\+?[1-9]\d{9,13}$/.test(trimmed.replace(/\s/g, ""));
+  const codeValid = /^\d{6}$/.test(code.trim());
+  const masked =
+    channel === "email"
+      ? trimmed
+      : trimmed.length > 6
+        ? `${trimmed.slice(0, 3)}••••${trimmed.slice(-3)}`
+        : "••••";
 
 function switchChannel(next: OtpChannel) {
     setChannel(next);
@@ -218,16 +175,14 @@ const requestOtp = useCallback(
       setError(null);
       setInfo(null);
       try {
-        const target = channel === "email" ? { email: destination.trim() } : { phone: destination.trim() };
+        const target = channel === "email" ? { email: trimmed } : { phone: trimmed };
         const { error: otpError } = await supabase.auth.signInWithOtp(target);
         if (otpError) throw otpError;
         setPhase("code");
-        setCooldownActive(true);
         setCode("");
+        setCooldownActive(true);
         setInfo(
-          resend
-            ? `A new 6-digit code was sent to ${maskedDestination} via ${channel === "email" ? "email" : "SMS"}.`
-            : `Verification code sent to ${maskedDestination} via ${channel === "email" ? "email" : "SMS"}. Valid for 10 minutes.`
+          `${resend ? "A new" : "Verification"} 6-digit code was sent to ${masked} via ${channel === "email" ? "email" : "SMS"}. Valid for 10 minutes.`
         );
       } catch (err) {
         setError(
@@ -239,7 +194,7 @@ const requestOtp = useCallback(
         setBusy(false);
       }
     },
-    [channel, destination, maskedDestination]
+    [channel, trimmed, masked]
   );
 
 async function verifyOtp() {
@@ -248,8 +203,8 @@ async function verifyOtp() {
     try {
       const payload =
         channel === "email"
-          ? { type: "email" as const, email: destination.trim(), token: code.trim() }
-          : { type: "sms" as const, phone: destination.trim(), token: code.trim() };
+          ? { type: "email" as const, email: trimmed, token: code.trim() }
+          : { type: "sms" as const, phone: trimmed, token: code.trim() };
       const { error: verifyError } = await supabase.auth.verifyOtp(payload);
       if (verifyError) throw verifyError;
       onDismiss();
@@ -348,20 +303,4 @@ return (
           ) : (
             <>
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-300">6-digit verification code</span>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  disabled={busy}
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  placeholder="••••••"
-                  className="w-full rounded-xl border border-slate-700/60 bg-slate-950/50 px-4 py-3 text-center text-2xl font-semibold tracking-[0.6em] text-slate-100 placeholder:text-slate-600 outline-none transition focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50"
-                />
-              </label>
-              <p className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
-                <span>
-                  Sent to <span className
+                <span className="mb-1.5
