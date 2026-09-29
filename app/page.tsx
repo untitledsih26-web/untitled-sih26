@@ -1,649 +1,1062 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+/* app/page.tsx
+ *
+ * Required dependencies:
+ *   @supabase/supabase-js
+ *   lucide-react
+ *
+ * Tailwind must already be configured in the surrounding Next.js project.
+ *
+ * SECURITY:
+ * - Only a public Supabase key belongs in NEXT_PUBLIC_* variables.
+ * - app_metadata is used for UI gating, not backend authorization.
+ * - Production access requires RLS and server-side authorization.
+ * - Governance data below is synthetic and remains in component memory.
+ * - SHA-256 is an integrity digest, not a digital signature.
+ * - Certificate downloads are unsigned processing-record previews.
+ */
+
 import {
-  Shield,
-  User,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Lock,
-  ArrowRight,
-  LogOut,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
+  createClient,
+  type Session,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
+import {
   Activity,
-  Check,
-  Loader2,
+  ArrowRight,
+  Bell,
   Building2,
-  Smartphone,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Cpu,
+  Download,
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Fingerprint,
+  Globe2,
+  GraduationCap,
+  HeartPulse,
+  Landmark,
+  Leaf,
+  Lock,
+  LogOut,
   Mail,
+  MessageSquare,
+  Mic,
+  Paperclip,
+  Play,
+  QrCode,
   RefreshCw,
+  Search,
+  Send,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserCheck,
+  Users,
+  Wallet,
+  X,
+  AlertTriangle,
+  type LucideIcon,
 } from "lucide-react";
 
-// Safe Supabase Client Initialization (falls back gracefully if env vars are missing)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydwqfjmphzfc.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/* -------------------------------------------------------------------------- */
+/* Types and configuration                                                    */
+/* -------------------------------------------------------------------------- */
 
-export default function SarkarSevaApp() {
-  // Navigation & Auth States
-  const [session, setSession] = useState<any>(null);
-  const [currentView, setCurrentView] = useState<"landing" | "user" | "admin">("landing");
-  const [authMode, setAuthMode] = useState<"email" | "phone">("email");
-  
-  // Login Inputs & OTP States
-  const [contactInput, setContactInput] = useState("");
-  const [otpToken, setOtpToken] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+type View = "services" | "agents" | "tracker" | "assistant" | "admin";
+type Language = "en" | "hi" | "bn" | "mr" | "ta";
+type Category =
+  | "All"
+  | "Socio-Economic"
+  | "Agriculture"
+  | "Education"
+  | "Healthcare"
+  | "Small Business";
+type Risk = "Low" | "Medium" | "High Anomaly";
+type ApplicationStatus =
+  | "Submitted"
+  | "Processing"
+  | "Review ready"
+  | "Manual audit"
+  | "Approved"
+  | "Rejected";
+type Decision = "Approved" | "Manual audit" | "Rejected";
 
-  // Citizen Form States
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    name: "",
-    dob: "",
-    aadhaarRef: "[Aadhaar Redacted]",
-    consent: false,
+type Scheme = {
+  id: string;
+  name: string;
+  department: string;
+  category: Exclude<Category, "All">;
+  description: string;
+  time: string;
+  icon: LucideIcon;
+  documents: string[];
+};
+
+type Application = {
+  id: string;
+  applicant: string;
+  schemeId: string;
+  scheme: string;
+  risk: Risk;
+  confidence: number | null;
+  status: ApplicationStatus;
+  stage: number;
+  updatedAt: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "assistant" | "user";
+  text: string;
+};
+
+type Attachment = {
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+};
+
+const VIEW_ORDER: View[] = [
+  "services",
+  "agents",
+  "tracker",
+  "assistant",
+  "admin",
+];
+
+const VIEW_ICONS: Record<View, LucideIcon> = {
+  services: Landmark,
+  agents: Cpu,
+  tracker: FileText,
+  assistant: MessageSquare,
+  admin: Building2,
+};
+
+const TRANSLATIONS: Record<
+  Language,
+  {
+    label: string;
+    views: Record<View, string>;
+    heading: string;
+    lead: string;
+  }
+> = {
+  en: {
+    label: "English",
+    views: {
+      services: "Citizen Services",
+      agents: "Agent Control Room",
+      tracker: "Application Tracker",
+      assistant: "Sarkar Mitra",
+      admin: "Officer Operations",
+    },
+    heading: "One nation. Accessible services.",
+    lead: "Discover services, prepare applications and follow every step.",
+  },
+  hi: {
+    label: "हिंदी",
+    views: {
+      services: "नागरिक सेवाएँ",
+      agents: "एजेंट नियंत्रण कक्ष",
+      tracker: "आवेदन की स्थिति",
+      assistant: "सरकार मित्र",
+      admin: "अधिकारी संचालन",
+    },
+    heading: "एक राष्ट्र। सुलभ सेवाएँ।",
+    lead: "सेवाएँ खोजें, आवेदन तैयार करें और हर चरण की जानकारी पाएँ।",
+  },
+  bn: {
+    label: "বাংলা",
+    views: {
+      services: "নাগরিক পরিষেবা",
+      agents: "এজেন্ট নিয়ন্ত্রণ কক্ষ",
+      tracker: "আবেদনের অবস্থা",
+      assistant: "সরকার মিত্র",
+      admin: "আধিকারিক কার্যক্রম",
+    },
+    heading: "এক দেশ। সহজলভ্য পরিষেবা।",
+    lead: "পরিষেবা খুঁজুন, আবেদন প্রস্তুত করুন এবং অগ্রগতি দেখুন।",
+  },
+  mr: {
+    label: "मराठी",
+    views: {
+      services: "नागरिक सेवा",
+      agents: "एजंट नियंत्रण कक्ष",
+      tracker: "अर्जाची स्थिती",
+      assistant: "सरकार मित्र",
+      admin: "अधिकारी कामकाज",
+    },
+    heading: "एक राष्ट्र। सुलभ सेवा।",
+    lead: "सेवा शोधा, अर्ज तयार करा आणि प्रत्येक टप्प्याची माहिती मिळवा.",
+  },
+  ta: {
+    label: "தமிழ்",
+    views: {
+      services: "குடிமக்கள் சேவைகள்",
+      agents: "முகவர் கட்டுப்பாட்டு அறை",
+      tracker: "விண்ணப்ப நிலை",
+      assistant: "சர்க்கார் மித்ரா",
+      admin: "அலுவலர் செயல்பாடுகள்",
+    },
+    heading: "ஒரே நாடு. எளிதில் அணுகக்கூடிய சேவைகள்.",
+    lead: "சேவைகளைத் தேடி, விண்ணப்பங்களைத் தயாரித்து, முன்னேற்றத்தைப் பாருங்கள்.",
+  },
+};
+
+const SCHEMES: Scheme[] = [
+  {
+    id: "dbt",
+    name: "Direct Benefit Transfer",
+    department: "Benefit Delivery Department",
+    category: "Socio-Economic",
+    description:
+      "Prepare a benefit-transfer request and check document readiness.",
+    time: "Instant AI pre-check",
+    icon: Wallet,
+    documents: [
+      "Identity document available",
+      "Bank account evidence available",
+      "Scheme-specific supporting document available",
+    ],
+  },
+  {
+    id: "ration",
+    name: "Ration Card Renewal",
+    department: "Food & Public Distribution",
+    category: "Socio-Economic",
+    description:
+      "Review household details and prepare a renewal application.",
+    time: "Instant AI pre-check",
+    icon: FileSpreadsheet,
+    documents: [
+      "Existing ration card available",
+      "Address evidence available",
+      "Household details reviewed",
+    ],
+  },
+  {
+    id: "land",
+    name: "Land Revenue Records",
+    department: "State Revenue Department",
+    category: "Agriculture",
+    description:
+      "Organise land-record references for the relevant state authority.",
+    time: "Document-dependent",
+    icon: Leaf,
+    documents: [
+      "Land-record reference available",
+      "Identity document available",
+      "District and village details available",
+    ],
+  },
+  {
+    id: "pension",
+    name: "Pension Allocation",
+    department: "Social Welfare Department",
+    category: "Socio-Economic",
+    description:
+      "Prepare supporting information for pension eligibility assessment.",
+    time: "Instant AI pre-check",
+    icon: Users,
+    documents: [
+      "Identity document available",
+      "Age evidence available",
+      "Scheme-specific income evidence available",
+    ],
+  },
+  {
+    id: "education",
+    name: "Education Assistance",
+    department: "Education Department",
+    category: "Education",
+    description:
+      "Organise enrolment and supporting records for assistance schemes.",
+    time: "Instant AI pre-check",
+    icon: GraduationCap,
+    documents: [
+      "Enrolment evidence available",
+      "Academic records available",
+      "Scheme-specific supporting document available",
+    ],
+  },
+  {
+    id: "health",
+    name: "Healthcare Assistance",
+    department: "Health & Family Welfare",
+    category: "Healthcare",
+    description:
+      "Prepare the documents needed for healthcare support assessment.",
+    time: "Document-dependent",
+    icon: HeartPulse,
+    documents: [
+      "Identity document available",
+      "Relevant health records available",
+      "Scheme-specific supporting document available",
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Small Business Support",
+    department: "Enterprise Development",
+    category: "Small Business",
+    description:
+      "Review business records before approaching the relevant scheme.",
+    time: "Instant AI pre-check",
+    icon: Building2,
+    documents: [
+      "Business details available",
+      "Identity document available",
+      "Financial supporting documents available",
+    ],
+  },
+];
+
+const CATEGORIES: Category[] = [
+  "All",
+  "Socio-Economic",
+  "Agriculture",
+  "Education",
+  "Healthcare",
+  "Small Business",
+];
+
+const INITIAL_APPLICATIONS: Application[] = [
+  {
+    id: "SKR-2026-9842",
+    applicant: "Asha Verma",
+    schemeId: "pension",
+    scheme: "Pension Allocation",
+    risk: "Low",
+    confidence: 98.6,
+    status: "Review ready",
+    stage: 5,
+    updatedAt: "2026-09-29T10:30:00.000Z",
+  },
+  {
+    id: "SKR-2026-9843",
+    applicant: "Ravi Kumar",
+    schemeId: "land",
+    scheme: "Land Revenue Records",
+    risk: "Medium",
+    confidence: 86.4,
+    status: "Manual audit",
+    stage: 3,
+    updatedAt: "2026-09-29T10:31:00.000Z",
+  },
+  {
+    id: "SKR-2026-9844",
+    applicant: "Meera Das",
+    schemeId: "ration",
+    scheme: "Ration Card Renewal",
+    risk: "Low",
+    confidence: 97.2,
+    status: "Review ready",
+    stage: 5,
+    updatedAt: "2026-09-29T10:32:00.000Z",
+  },
+  {
+    id: "SKR-2026-9845",
+    applicant: "Arun Rao",
+    schemeId: "enterprise",
+    scheme: "Small Business Support",
+    risk: "High Anomaly",
+    confidence: 62.8,
+    status: "Manual audit",
+    stage: 3,
+    updatedAt: "2026-09-29T10:33:00.000Z",
+  },
+  {
+    id: "SKR-2026-9846",
+    applicant: "Fatima Ali",
+    schemeId: "education",
+    scheme: "Education Assistance",
+    risk: "Low",
+    confidence: 96.9,
+    status: "Review ready",
+    stage: 5,
+    updatedAt: "2026-09-29T10:34:00.000Z",
+  },
+];
+
+const PIPELINE_STAGES = [
+  "Submitted",
+  "OCR Parsing",
+  "FraudGuard Audit",
+  "Policy Match",
+  "Certificate Preview",
+];
+
+const AGENTS: {
+  name: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  {
+    name: "Agent-OCR",
+    description:
+      "Text extraction and document checks for identity, income and land records.",
+    icon: FileText,
+  },
+  {
+    name: "Agent-FraudGuard",
+    description:
+      "Metadata anomalies, reference-hash checks and zero-trust validation.",
+    icon: Fingerprint,
+  },
+  {
+    name: "Agent-PolicyMatcher",
+    description:
+      "Versioned rule evaluation and evidence-based eligibility checks.",
+    icon: ShieldCheck,
+  },
+  {
+    name: "Agent-Router",
+    description:
+      "Department routing and exception dispatch to authorised officers.",
+    icon: Building2,
+  },
+];
+
+const LOG_EVENTS = [
+  {
+    agent: "Intake",
+    event: "payload.parsed",
+    confidence: null,
+    summary: "Required envelope fields found; processing record created.",
+    payload: { schema: "application.v1", documentCount: 3 },
+  },
+  {
+    agent: "Agent-OCR",
+    event: "document.fields_extracted",
+    confidence: 98.4,
+    summary: "Scenario document fields matched the expected schema.",
+    payload: { extractedFields: 12, missingFields: 0 },
+  },
+  {
+    agent: "Agent-FraudGuard",
+    event: "audit.completed",
+    confidence: 97.8,
+    summary:
+      "Scenario metadata checks passed. No biometric data was collected.",
+    payload: { anomalyCount: 0, biometricSource: "not_connected" },
+  },
+  {
+    agent: "Agent-PolicyMatcher",
+    event: "policy.evaluated",
+    confidence: 99.1,
+    summary: "Configured scenario rules matched the supplied example evidence.",
+    payload: { policyVersion: "scenario.v1", matchedRules: 4 },
+  },
+  {
+    agent: "Agent-Router",
+    event: "review.routed",
+    confidence: 98.6,
+    summary:
+      "Recommendation prepared for officer review; no benefit was sanctioned.",
+    payload: { destination: "department_review", recommendation: "approve" },
+  },
+  {
+    agent: "Registry",
+    event: "preview.ready",
+    confidence: null,
+    summary: "Unsigned processing-record preview is ready in the tracker.",
+    payload: { signature: "not_issued", status: "review_ready" },
+  },
+];
+
+let browserClient: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+  if (browserClient) return browserClient;
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!url || !key) return null;
+
+browserClient = createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   });
-  const [submitting, setSubmitting] = useState(false);
-  const [backendResult, setBackendResult] = useState<any>(null);
 
-  // Admin Oversight States
-  const [adminCases, setAdminCases] = useState([
-    { id: "HS-2025-01478", name: "Manya C R", service: "Housing Scheme", status: "Cleared", flagged: false },
-    { id: "IC-2025-99212", name: "Ramesh Kumar", service: "Income Certificate", status: "Anomaly Detected", flagged: true },
-  ]);
-  const [selectedCase, setSelectedCase] = useState(adminCases[1]);
+return browserClient;
+}
 
-  // Check initial session
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+function isOfficer(session: Session | null): boolean {
+  const role: unknown = session?.user.app_metadata?.role;
+  return role === "officer" || role === "admin";
+}
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
+function departmentOf(session: Session | null): string {
+  const department: unknown = session?.user.app_metadata?.department;
+  return typeof department === "string"
+    ? department
+    : isOfficer(session)
+      ? "Department not assigned"
+      : "Citizen access";
+}
 
-    return () => subscription.unsubscribe();
+function formatTime(value: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "medium",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(value));
+}
+
+function makeId(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
+function createReference(): string {
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+  return `SKR-${new Date().getUTCFullYear()}-${suffix}`;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "The request could not be completed. Please try again.";
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared UI                                                                  */
+/* -------------------------------------------------------------------------- */
+
+function Button({
+  children,
+  variant = "primary",
+  className = "",
+  type = "button",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary" | "quiet" | "danger";
+}) {
+  const variants = {
+    primary:
+      "border-[#1A365D] bg-[#1A365D] text-white hover:bg-[#0B192C]",
+    secondary:
+      "border-slate-300 bg-white text-[#1A365D] hover:bg-slate-50",
+    quiet:
+      "border-transparent bg-transparent text-[#1A365D] hover:bg-slate-100",
+    danger: "border-red-700 bg-red-700 text-white hover:bg-red-800",
+  };
+
+return (
+    <button
+      type={type}
+      className={`inline-flex min-h-11 items-center justify-center gap-2
+        rounded border px-4 py-2 font-semibold transition-colors
+        disabled:cursor-not-allowed disabled:opacity-50
+        ${variants[variant]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Badge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "green" | "amber" | "red";
+}) {
+  const colors = {
+    neutral: "border-slate-300 bg-slate-50 text-slate-700",
+    green: "border-green-300 bg-green-50 text-green-800",
+    amber: "border-amber-300 bg-amber-50 text-amber-900",
+    red: "border-red-300 bg-red-50 text-red-800",
+  };
+
+return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded border
+        px-2 py-1 text-xs font-semibold ${colors[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function RiskBadge({ risk }: { risk: Risk }) {
+  return (
+    <Badge
+      tone={risk === "Low" ? "green" : risk === "Medium" ? "amber" : "red"}
+    >
+      {risk === "High Anomaly" && (
+        <AlertTriangle size={13} aria-hidden="true" />
+      )}
+      {risk}
+    </Badge>
+  );
+}
+
+function Chakra({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+    >
+      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="4" />
+      <circle cx="50" cy="50" r="7" fill="currentColor" />
+      {Array.from({ length: 24 }, (_, index) => (
+        <line
+          key={index}
+          x1="50"
+          y1="43"
+          x2="50"
+          y2="7"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          transform={`rotate(${index * 15} 50 50)`}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="max-w-3xl">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-600">
+          {eyebrow}
+        </p>
+        <h2 className="text-2xl font-bold tracking-tight text-[#0B192C] sm:text-3xl">
+          {title}
+        </h2>
+        <p className="mt-2 leading-7 text-slate-600">{description}</p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-800">
+        {label}
+      </span>
+      {children}
+      {hint && (
+        <span className="mt-1.5 block text-xs leading-5 text-slate-600">
+          {hint}
+        </span>
+      )}
+    </label>
+  );
+}
+
+const INPUT =
+  "min-h-11 w-full rounded border border-slate-400 bg-white px-3 py-2 text-slate-900";
+
+function Modal({
+  title,
+  children,
+  onClose,
+  wide = false,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  wide?: boolean;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+useEffect(() => {
+    const node = dialog.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const oldOverflow = document.body.style.overflow;
+
+node?.showModal();
+    document.body.style.overflow = "hidden";
+
+return () => {
+      node?.close();
+      document.body.style.overflow = oldOverflow;
+      previous?.focus();
+    };
   }, []);
 
-  // Cooldown timer effect
-  useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
-      return () => clearInterval(timer);
+return (
+    <dialog
+      ref={dialog}
+      aria-labelledby={titleId}
+      className={`m-auto max-h-[90dvh] w-[calc(100%-2rem)] overflow-auto
+        rounded-md border border-slate-300 bg-white p-0 text-slate-900
+        shadow-xl backdrop:bg-slate-950/60
+        ${wide ? "max-w-3xl" : "max-w-lg"}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target !== event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (
+          event.clientX < rect.left ||
+          event.clientX > rect.right ||
+          event.clientY < rect.top ||
+          event.clientY > rect.bottom
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-center justify-between gap-4 border-b p-5">
+        <h2 id={titleId} className="text-xl font-bold text-[#1A365D]">
+          {title}
+        </h2>
+        <Button
+          variant="quiet"
+          aria-label={`Close ${title}`}
+          onClick={onClose}
+          className="shrink-0 px-3"
+        >
+          <X size={20} aria-hidden="true" />
+        </Button>
+      </div>
+      <div className="p-5 sm:p-6">{children}</div>
+    </dialog>
+  );
+}
+
+/* Safe, intentionally small Markdown renderer.
+ * React escapes text; no raw HTML or untrusted links are rendered.
+ */
+function MarkdownText({ text }: { text: string }) {
+  const inline = (line: string) =>
+    line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={index} className="rounded bg-slate-100 px-1 text-sm">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+
+const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+
+for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+
+if (line.startsWith("- ")) {
+      const items: string[] = [line.slice(2)];
+      while (i + 1 < lines.length && lines[i + 1].startsWith("- ")) {
+        i += 1;
+        items.push(lines[i].slice(2));
+      }
+      blocks.push(
+        <ul key={`list-${i}`} className="list-disc space-y-1 pl-5">
+          {items.map((item, index) => (
+            <li key={index}>{inline(item)}</li>
+          ))}
+        </ul>,
+      );
+    } else if (line.startsWith("### ")) {
+      blocks.push(
+        <h3 key={i} className="font-bold text-[#1A365D]">
+          {inline(line.slice(4))}
+        </h3>,
+      );
+    } else {
+      blocks.push(<p key={i}>{inline(line)}</p>);
     }
+  }
+
+return <div className="space-y-3 leading-7">{blocks}</div>;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Supabase authentication                                                    */
+/* -------------------------------------------------------------------------- */
+
+function AuthDialog({
+  client,
+  onClose,
+  onNotice,
+}: {
+  client: SupabaseClient | null;
+  onClose: () => void;
+  onNotice: (message: string) => void;
+}) {
+  const [mode, setMode] = useState<"citizen" | "officer">("citizen");
+  const [method, setMethod] = useState<"login" | "signup" | "otp">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [token, setToken] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [failure, setFailure] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const alive = useRef(true);
+
+useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
+
+useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((n) => n - 1), 1000);
+    return () => window.clearTimeout(timer);
   }, [cooldown]);
 
-  // --- AUTHENTICATION HANDLERS ---
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError("");
+async function finish(session: Session | null) {
+    if (!session) return false;
 
-    try {
-      if (authMode === "email") {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: contactInput,
-          options: { emailRedirectTo: window.location.origin },
+if (mode === "officer" && !isOfficer(session)) {
+      setFailure(true);
+      setMessage(
+        "Signed in with citizen access. This account has no officer role. " +
+          "Selecting Officer Access does not grant additional permissions.",
+      );
+      return true;
+    }
+
+onNotice(
+      isOfficer(session)
+        ? "Officer session established."
+        : "Citizen session established.",
+    );
+    onClose();
+    return true;
+  }
+
+async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+
+setMessage("");
+    setFailure(false);
+
+if (!client) {
+      setFailure(true);
+      setMessage(
+        "Authentication is not configured. Set the public Supabase URL and key.",
+      );
+      return;
+    }
+
+setBusy(true);
+
+try {
+      const normalisedEmail = email.trim();
+
+if (method === "login") {
+        const { data, error } = await client.auth.signInWithPassword({
+          email: normalisedEmail,
+          password,
         });
         if (error) throw error;
+        if (!alive.current) return;
+        await finish(data.session);
+      } else if (method === "signup") {
+        if (mode === "officer") {
+          throw new Error("Officer accounts must be provisioned by an administrator.");
+        }
+
+const { data, error } = await client.auth.signUp({
+          email: normalisedEmail,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + window.location.pathname,
+          },
+        });
+
+if (error) throw error;
+        if (!alive.current) return;
+
+if (!(await finish(data.session))) {
+          setMessage(
+            "Check your email for confirmation instructions, if registration is available.",
+          );
+        }
+      } else if (!otpSent) {
+        if (cooldown > 0) return;
+
+const { error } = await client.auth.signInWithOtp({
+          email: normalisedEmail,
+          options: {
+            // Registration has its own explicit flow.
+            shouldCreateUser: false,
+            emailRedirectTo: window.location.origin + window.location.pathname,
+          },
+        });
+
+if (error) throw error;
+        if (!alive.current) return;
+
+setOtpSent(true);
+        setCooldown(60);
+        setMessage("If the account is eligible, a sign-in code has been sent.");
       } else {
-        // Phone OTP (requires international format e.g., +91...)
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: contactInput,
+        const { data, error } = await client.auth.verifyOtp({
+          email: normalisedEmail,
+          token: token.trim(),
+          type: "email",
         });
-        if (error) throw error;
+
+if (error) throw error;
+        if (!alive.current) return;
+        await finish(data.session);
       }
-      setOtpSent(true);
-      setCooldown(60);
-    } catch (err: any) {
-      setAuthError(err.message || "Failed to send verification code. Check rate limits.");
+    } catch {
+      if (alive.current) {
+        setFailure(true);
+        setMessage(
+          "Authentication could not be completed. Check your details, code " +
+            "and email confirmation, or try again later.",
+        );
+      }
     } finally {
-      setAuthLoading(false);
+      if (alive.current) setBusy(false);
     }
-  };
+  }
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    setAuthError("");
-
-    try {
-      const verifyPayload =
-        authMode === "email"
-          ? { email: contactInput, token: otpToken, type: "email" }
-          : { phone: contactInput, token: otpToken, type: "sms" };
-
-      const { data, error } = await supabase.auth.verifyOtp(verifyPayload as any);
-      if (error) throw error;
-      setSession(data.session);
-    } catch (err: any) {
-      setAuthError(err.message || "Invalid OTP code entered.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setCurrentView("landing");
+function changeMethod(next: "login" | "signup" | "otp") {
+    setMethod(next);
     setOtpSent(false);
-    setContactInput("");
-    setOtpToken("");
-  };
-
-  // --- CITIZEN APPLICATION & BACKEND API SUBMISSION ---
-  const handleCitizenSubmit = async () => {
-    setSubmitting(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://sarkar-backend.up.railway.app";
-
-    try {
-      const response = await fetch(`${apiUrl}/api/process-application`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicant_name: formData.name,
-          date_of_birth: formData.dob,
-          identifier: "SECURE_HASH_VERIFIED",
-          consent_given: formData.consent,
-          service_type: "Housing Scheme",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Backend agent pipeline responded with an error.");
-      }
-
-      const result = await response.json();
-      setBackendResult(result);
-    } catch (err) {
-      // Fallback telemetry simulation if backend is sleeping or unreachable
-      setBackendResult({
-        decision: "Approved - Fast Track",
-        application_id: "HS-2026-88421",
-        telemetry: {
-          execution_time_ms: 342,
-          token_usage: 412,
-          pipeline_status: "All 7 Agents Executed Successfully",
-        },
-        agents: [
-          { name: "Request Agent", status: "Complete", latency: "45ms" },
-          { name: "Routing Agent", status: "Complete", latency: "30ms" },
-          { name: "Data Agents", status: "Complete", latency: "110ms" },
-          { name: "Validation Agent", status: "Complete", latency: "85ms" },
-          { name: "Consent & Security", status: "Verified", latency: "20ms" },
-          { name: "Response Agent", status: "Formatted", latency: "30ms" },
-          { name: "Notifier Agent", status: "Dispatched", latency: "22ms" },
-        ],
-      });
-    } finally {
-      setSubmitting(false);
-      setStep(3);
-    }
-  };
-
-  // ================= VIEW 0: LOGIN & AUTH SCREEN =================
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans text-slate-100">
-        <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center space-x-2 bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/30">
-              <span>SIH 2026 GovTech Platform</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Sarkar Seva Portal</h1>
-            <p className="text-xs text-slate-400">Secure Interoperability & Multi-Agent Verification</p>
-          </div>
-
-          {/* Auth Method Switcher */}
-          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs font-medium">
-            <button
-              onClick={() => { setAuthMode("email"); setOtpSent(false); setAuthError(""); }}
-              className={`flex-1 py-2 rounded-lg transition flex items-center justify-center space-x-2 ${
-                authMode === "email" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Email OTP</span>
-            </button>
-            <button
-              onClick={() => { setAuthMode("phone"); setOtpSent(false); setAuthError(""); }}
-              className={`flex-1 py-2 rounded-lg transition flex items-center justify-center space-x-2 ${
-                authMode === "phone" ? "bg-blue-600 text-white shadow" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Mobile OTP</span>
-            </button>
-          </div>
-
-          {authError && (
-            <div className="p-3 bg-red-950/50 border border-red-800/60 rounded-lg text-xs text-red-300">
-              {authError}
-            </div>
-          )}
-
-          {!otpSent ? (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  {authMode === "email" ? "Email Address *" : "Mobile Number (with +91) *"}
-                </label>
-                <input
-                  type={authMode === "email" ? "email" : "tel"}
-                  required
-                  placeholder={authMode === "email" ? "name@example.com" : "+919876543210"}
-                  value={contactInput}
-                  onChange={(e) => setContactInput(e.target.value)}
-                  className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={authLoading || cooldown > 0}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl text-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Send Secure OTP</span>}
-              </button>
-              {cooldown > 0 && (
-                <p className="text-center text-xs text-slate-500">Resend code available in {cooldown}s</p>
-              )}
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div className="text-center space-y-1">
-                <p className="text-xs text-slate-400">Verification code sent to <span className="text-white font-medium">{contactInput}</span></p>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Enter 6-Digit OTP *</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  required
-                  placeholder="123456"
-                  value={otpToken}
-                  onChange={(e) => setOtpToken(e.target.value)}
-                  className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg font-mono tracking-widest text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl text-sm transition disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Verify & Enter Portal</span>}
-              </button>
-              <button
-                type="button"
-                onClick={() => setOtpSent(false)}
-                className="w-full text-xs text-slate-400 hover:text-slate-200 text-center pt-2"
-              >
-                ← Change contact info
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-    );
+    setToken("");
+    setPassword("");
+    setMessage("");
   }
 
-  // ================= VIEW 1: LANDING / ROLE SELECTOR =================
-  if (currentView === "landing") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans text-slate-900">
-        <header className="mb-12 text-center space-y-3">
-          <div className="inline-flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
-            <span className="bg-blue-600 text-white font-bold rounded px-2 py-0.5 text-xs">SIH 2026</span>
-            <span className="text-sm font-semibold text-slate-700">Sarkar Seva Unified Interoperability</span>
-          </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900">Next-Gen GovTech Portal</h1>
-          <p className="text-slate-500 max-w-lg mx-auto text-sm">Select your gateway role to access secure department orchestration.</p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-          <button
-            onClick={() => setCurrentView("user")}
-            className="group bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-500 hover:shadow-md transition text-left space-y-4"
-          >
-            <div className="bg-blue-50 w-12 h-12 flex items-center justify-center rounded-xl text-blue-600 text-2xl group-hover:bg-blue-600 group-hover:text-white transition">
-              👤
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">Citizen Portal</h2>
-              <p className="text-xs text-slate-500">Apply for welfare schemes, execute consent gates, and track multi-agent AI verification status.</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setCurrentView("admin")}
-            className="group bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-500 hover:shadow-md transition text-left space-y-4"
-          >
-            <div className="bg-emerald-50 w-12 h-12 flex items-center justify-center rounded-xl text-emerald-600 text-2xl group-hover:bg-emerald-600 group-hover:text-white transition">
-              🛡️
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-slate-800 mb-1">Department Admin</h2>
-              <p className="text-xs text-slate-500">Monitor cross-department APIs, review AI validation anomaly flags, and oversee LangGraph pipelines.</p>
-            </div>
-          </button>
-        </div>
-
-        <div className="mt-12">
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-slate-500 hover:text-slate-800 flex items-center space-x-1.5 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-xs"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out ({session.user.email || session.user.phone})</span>
-          </button>
-        </div>
+return (
+    <Modal title="Citizen / Officer Single Sign-On" onClose={onClose}>
+      <div className="mb-5 flex items-start gap-3 rounded border bg-slate-50 p-4">
+        <Lock className="mt-0.5 shrink-0 text-[#1A365D]" size={20} aria-hidden="true" />
+        <p className="text-sm leading-6">
+          Email authentication through Supabase. Officer permissions are assigned
+          by an authorised administrator.
+        </p>
       </div>
-    );
-  }
 
-  // ================= VIEW 2: CITIZEN APPLICATION WORKFLOW =================
-  if (currentView === "user") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center p-4 md:p-8 font-sans text-slate-900">
-        <header className="w-full max-w-2xl bg-white shadow-xs rounded-xl p-4 mb-6 flex justify-between items-center border border-slate-200">
-          <div className="flex items-center space-x-3">
-            <div className="bg-blue-600 text-white font-bold rounded-md px-3 py-1 text-xs">SIH 2026</div>
-            <h1 className="text-lg font-bold text-slate-800">Sarkar Seva Citizen Portal</h1>
-          </div>
-          <button
-            onClick={() => setCurrentView("landing")}
-            className="text-xs bg-slate-100 text-slate-600 font-medium px-3 py-1.5 rounded-lg hover:bg-slate-200 transition"
-          >
-            ← Back Home
-          </button>
-        </header>
-
-        <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-          {/* Step Progress Bar */}
-          <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center text-xs font-semibold text-slate-400">
-            <span className={step >= 1 ? "text-blue-600 font-bold" : ""}>1. Details</span>
-            <span>→</span>
-            <span className={step >= 2 ? "text-blue-600 font-bold" : ""}>2. Consent Gate</span>
-            <span>→</span>
-            <span className={step === 3 ? "text-blue-600 font-bold" : ""}>3. AI Status & Telemetry</span>
-          </div>
-
-          {step === 1 && (
-            <div className="p-6 space-y-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">Housing Scheme Application</h2>
-                <p className="text-xs text-slate-500 mt-1">Enter your details once. Our multi-agent pipeline auto-fetches records securely.</p>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter full legal name"
-                    className="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Date of Birth *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.dob}
-                    onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                    className="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Secure Identifier (Privacy Masked) *</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={formData.aadhaarRef}
-                    className="w-full p-3 bg-slate-100 border border-slate-300 rounded-xl text-sm text-slate-500 font-mono cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (!formData.name || !formData.dob) {
-                    alert("Please fill in all required fields.");
-                    return;
-                  }
-                  setStep(2);
-                }}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-blue-500 transition shadow-sm"
+<form onSubmit={submit} className="space-y-5" aria-busy={busy}>
+        <fieldset disabled={busy} className="space-y-4">
+          <legend className="mb-2 text-sm font-semibold">Access mode</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(["citizen", "officer"] as const).map((value) => (
+              <label
+                key={value}
+                className={`flex min-h-12 cursor-pointer items-center gap-2
+                  rounded border p-3 text-sm font-semibold
+                  ${mode === value ? "border-[#1A365D] bg-blue-50" : "border-slate-300"}`}
               >
-                Proceed to Consent Gate →
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold text-slate-800">Department Consent Gate</h2>
-              <div className="p-4 bg-blue-50 rounded-xl text-xs text-blue-900 space-y-2 border border-blue-100">
-                <p className="font-semibold">Automated Data Fetching Notice:</p>
-                <p>With your explicit digital consent, Sarkar Seva agents will securely query:</p>
-                <ul className="list-disc list-inside space-y-1 font-mono text-blue-800">
-                  <li>Land Records Department (Revenue)</li>
-                  <li>Income & Taxation Department</li>
-                  <li>Identity Verification Portal</li>
-                </ul>
-              </div>
-
-              <label className="flex items-start space-x-3 cursor-pointer pt-2">
                 <input
-                  type="checkbox"
-                  checked={formData.consent}
-                  onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                  type="radio"
+                  name="access-mode"
+                  checked={mode === value}
+                  onChange={() => {
+                    setMode(value);
+                    if (value === "officer" && method === "signup") {
+                      changeMethod("login");
+                    }
+                    setMessage("");
+                  }}
                 />
-                <span className="text-xs text-slate-600">
-                  I authorize Sarkar Seva to query linked departmental databases via standardized APIs for real-time application verification.
-                </span>
+                {value === "citizen" ? "Citizen Access" : "Officer / Admin Access"}
               </label>
-
-              <button
-                onClick={handleCitizenSubmit}
-                disabled={!formData.consent || submitting}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-blue-500 transition disabled:opacity-50 flex items-center justify-center space-x-2 shadow-sm"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Executing 7-Agent Pipeline...</span>
-                  </>
-                ) : (
-                  <span>Submit & Auto-Verify via AI</span>
-                )}
-              </button>
-              <button
-                onClick={() => setStep(1)}
-                className="w-full text-xs text-slate-500 hover:text-slate-800 text-center pt-2"
-              >
-                ← Back to Details
-              </button>
-            </div>
-          )}
-
-          {step === 3 && backendResult && (
-            <div className="p-6 space-y-4 text-center">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-xs">
-                ✓
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Application Processed</h2>
-                <p className="text-xs text-slate-500 mt-1">Multi-agent verification completed successfully.</p>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">Application ID:</span>
-                  <span className="font-mono font-bold text-blue-600 text-sm">{backendResult.application_id}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">Pipeline Status:</span>
-                  <span className="text-emerald-600 font-medium text-xs">Verified ✓</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-500">Execution Time:</span>
-                  <span className="text-slate-700 font-mono text-xs">{backendResult.telemetry?.execution_time_ms || 342}ms</span>
-                </div>
-              </div>
-
-              {/* Agent Pipeline Telemetry Grid */}
-              <div className="text-left space-y-1.5">
-                <p className="text-xs font-semibold text-slate-700">7-Agent Execution Trace:</p>
-                <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto">
-                  {backendResult.agents?.map((agent: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100 text-xs">
-                      <span className="text-slate-700 font-medium">{agent.name}</span>
-                      <span className="text-emerald-600 font-mono text-[10px] bg-emerald-50 px-2 py-0.5 rounded">{agent.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => { setStep(1); setFormData({ name: "", dob: "", aadhaarRef: "[Aadhaar Redacted]", consent: false }); }}
-                className="w-full bg-slate-900 text-white py-3 rounded-xl font-medium text-xs hover:bg-slate-800 transition"
-              >
-                Submit Another Application
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ================= VIEW 3: DEPARTMENT ADMIN DASHBOARD =================
-  if (currentView === "admin") {
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-900">
-        <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200 gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">Department Admin Dashboard</h1>
-            <p className="text-sm text-slate-500">AI Validation & Interoperability Oversight</p>
+            ))}
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full text-xs font-medium border border-emerald-200 flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>LangGraph Multi-Agent Pipeline: Online</span>
-            </span>
-            <button
-              onClick={() => setCurrentView("landing")}
-              className="text-xs bg-slate-100 text-slate-600 font-medium px-4 py-2 rounded-xl hover:bg-slate-200 transition"
+
+<Field label="Sign-in method">
+            <select
+              className={INPUT}
+              value={method}
+              onChange={(event) =>
+                changeMethod(event.target.value as "login" | "signup" | "otp")
+              }
             >
-              Log Out
-            </button>
-          </div>
-        </header>
+              <option value="login">Email and password</option>
+              <option value="otp">Email one-time code</option>
+              {mode === "citizen" && <option value="signup">Create citizen account</option>}
+            </select>
+          </Field>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Interoperability Requests Table */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="font-semibold text-slate-800 text-sm">Recent Interoperability Requests</h2>
-              <span className="text-xs text-slate-400 font-mono">Real-time sync</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-600">
-                <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-400 font-semibold">
-                  <tr>
-                    <th className="px-6 py-3">App ID</th>
-                    <th className="px-6 py-3">Applicant Name</th>
-                    <th className="px-6 py-3">Service</th>
-                    <th className="px-6 py-3">AI Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {adminCases.map((c, i) => (
-                    <tr
-                      key={i}
-                      onClick={() => setSelectedCase(c)}
-                      className={`hover:bg-slate-50 cursor-pointer transition ${c.flagged ? "bg-red-50/40" : ""}`}
-                    >
-                      <td className="px-6 py-4 font-mono font-medium text-slate-900 text-xs">{c.id}</td>
-                      <td className="px-6 py-4 font-medium text-slate-800 text-xs">{c.name}</td>
-                      <td className="px-6 py-4 text-xs">{c.service}</td>
-                      <td className="px-6 py-4">
-                        {c.flagged ? (
-                          <span className="text-red-600 font-medium text-xs bg-red-100 px-2.5 py-1 rounded-full">⚠️ Anomaly Detected</span>
-                        ) : (
-                          <span className="text-emerald-600 font-medium text-xs bg-emerald-100 px-2.5 py-1 rounded-full">✓ Cleared</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+<Field label="Email address">
+            <input
+              className={INPUT}
+              type="email"
+              autoComplete="email"
+              maxLength={254}
+              required
+              readOnly={otpSent}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="name@example.com"
+            />
+          </Field>
 
-          {/* AI Validation Agent Flag Review Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between border-b pb-3 mb-4">
-                <h2 className="font-semibold text-slate-800 text-sm">AI Validation Agent Flag</h2>
-                <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Action Required</span>
-              </div>
+{method !== "otp" && (
+            <Field
+              label="Password"
+              hint={
+                method === "signup"
+                  ? "Use at least 12 characters. Project password policies also apply."
+                  : undefined
+              }
+            >
+              <input
+                className={INPUT}
+                type="password"
+                required
+                minLength={method === "signup" ? 12 : 1}
+                maxLength={128}
+                autoComplete={method === "signup" ? "new-password" : "current-password"}
+                value={password}
+                onChange={(event)
 
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 space-y-3">
-                <p>
-                  <strong className="text-slate-900 font-semibold">Issue: {selectedCase.id}</strong> ({selectedCase.name})
-                </p>
-                <p>The cross-department validation agent detected a name mismatch anomaly between databases.</p>
-
-                <div className="space-y-2 pt-1">
-                  <div className="flex justify-between bg-white p-2.5 rounded-lg border border-red-200">
-                    <span className="text-slate-500">Revenue Dept:</span>
-                    <span className="font-medium text-red-600">Ramesh K.</span>
-                  </div>
-                  <div className="flex justify-between bg-white p-2.5 rounded-lg border border-slate-200">
-                    <span className="text-slate-500">Identity Portal:</span>
-                    <span className="font-medium text-slate-800">Ramesh Kumar</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-6 flex space-x-3">
-              <button
-                onClick={() => {
-                  setAdminCases(adminCases.map(c => c.id === selectedCase.id ? { ...c, flagged: false, status: "Cleared" } : c));
-                  alert(`Exception approved for ${selectedCase.id}`);
-                }}
-                className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-medium text-xs hover:bg-blue-500 transition shadow-xs"
-              >
-                Approve Exception
-              </button>
-              <button
-                onClick={() => {
-                  alert(`Application ${selectedCase.id} rejected.`);
-                }}
-                className="flex-1 bg-white border border-slate-300 text-slate-700 py-2.5 rounded-xl font-medium text-xs hover:bg-slate-50 transition"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
