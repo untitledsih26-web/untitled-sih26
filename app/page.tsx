@@ -1,1062 +1,418 @@
 "use client";
 
-/* app/page.tsx
- *
- * Required dependencies:
- *   @supabase/supabase-js
- *   lucide-react
- *
- * Tailwind must already be configured in the surrounding Next.js project.
- *
- * SECURITY:
- * - Only a public Supabase key belongs in NEXT_PUBLIC_* variables.
- * - app_metadata is used for UI gating, not backend authorization.
- * - Production access requires RLS and server-side authorization.
- * - Governance data below is synthetic and remains in component memory.
- * - SHA-256 is an integrity digest, not a digital signature.
- * - Certificate downloads are unsigned processing-record previews.
- */
-
+import React, { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type ButtonHTMLAttributes,
-  type FormEvent,
-  type ReactNode,
-} from "react";
-import {
-  createClient,
-  type Session,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-import {
-  Activity,
-  ArrowRight,
-  Bell,
-  Building2,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  Cpu,
-  Download,
-  Eye,
-  FileSpreadsheet,
-  FileText,
-  Fingerprint,
-  Globe2,
-  GraduationCap,
-  HeartPulse,
-  Landmark,
-  Leaf,
-  Lock,
-  LogOut,
-  Mail,
-  MessageSquare,
-  Mic,
-  Paperclip,
-  Play,
-  QrCode,
-  RefreshCw,
-  Search,
-  Send,
-  ShieldCheck,
-  SlidersHorizontal,
-  UserCheck,
-  Users,
-  Wallet,
-  X,
-  AlertTriangle,
-  type LucideIcon,
+  Home, LayoutDashboard, FileText, MessageSquare, LogOut, 
+  CheckCircle2, Shield, Loader2, Activity, Send
 } from "lucide-react";
 
-/* -------------------------------------------------------------------------- */
-/* Types and configuration                                                    */
-/* -------------------------------------------------------------------------- */
+// Supabase Init
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydwqfjmphzfc.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-type View = "services" | "agents" | "tracker" | "assistant" | "admin";
-type Language = "en" | "hi" | "bn" | "mr" | "ta";
-type Category =
-  | "All"
-  | "Socio-Economic"
-  | "Agriculture"
-  | "Education"
-  | "Healthcare"
-  | "Small Business";
-type Risk = "Low" | "Medium" | "High Anomaly";
-type ApplicationStatus =
-  | "Submitted"
-  | "Processing"
-  | "Review ready"
-  | "Manual audit"
-  | "Approved"
-  | "Rejected";
-type Decision = "Approved" | "Manual audit" | "Rejected";
+export default function SarkarSevaApp() {
+  const [session, setSession] = useState<any>(null);
+  const [currentView, setCurrentView] = useState("landing");
+  
+  // Auth State
+  const [authMode, setAuthMode] = useState<"email" | "phone">("email");
+  const [contact, setContact] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-type Scheme = {
-  id: string;
-  name: string;
-  department: string;
-  category: Exclude<Category, "All">;
-  description: string;
-  time: string;
-  icon: LucideIcon;
-  documents: string[];
-};
+  // Service Workflow State
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({ name: "", dob: "", scheme: "Housing Scheme Eligibility", consent: false });
+  const [pipelineActive, setPipelineActive] = useState(false);
+  const [pipelineProgress, setPipelineProgress] = useState(0);
 
-type Application = {
-  id: string;
-  applicant: string;
-  schemeId: string;
-  scheme: string;
-  risk: Risk;
-  confidence: number | null;
-  status: ApplicationStatus;
-  stage: number;
-  updatedAt: string;
-};
+  // Chat State
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState([{ role: "agent", text: "Hello! How can I assist you with Sarkar Seva today?" }]);
 
-type ChatMessage = {
-  id: string;
-  role: "assistant" | "user";
-  text: string;
-};
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
 
-type Attachment = {
-  name: string;
-  size: number;
-  type: string;
-  url: string;
-};
-
-const VIEW_ORDER: View[] = [
-  "services",
-  "agents",
-  "tracker",
-  "assistant",
-  "admin",
-];
-
-const VIEW_ICONS: Record<View, LucideIcon> = {
-  services: Landmark,
-  agents: Cpu,
-  tracker: FileText,
-  assistant: MessageSquare,
-  admin: Building2,
-};
-
-const TRANSLATIONS: Record<
-  Language,
-  {
-    label: string;
-    views: Record<View, string>;
-    heading: string;
-    lead: string;
-  }
-> = {
-  en: {
-    label: "English",
-    views: {
-      services: "Citizen Services",
-      agents: "Agent Control Room",
-      tracker: "Application Tracker",
-      assistant: "Sarkar Mitra",
-      admin: "Officer Operations",
-    },
-    heading: "One nation. Accessible services.",
-    lead: "Discover services, prepare applications and follow every step.",
-  },
-  hi: {
-    label: "हिंदी",
-    views: {
-      services: "नागरिक सेवाएँ",
-      agents: "एजेंट नियंत्रण कक्ष",
-      tracker: "आवेदन की स्थिति",
-      assistant: "सरकार मित्र",
-      admin: "अधिकारी संचालन",
-    },
-    heading: "एक राष्ट्र। सुलभ सेवाएँ।",
-    lead: "सेवाएँ खोजें, आवेदन तैयार करें और हर चरण की जानकारी पाएँ।",
-  },
-  bn: {
-    label: "বাংলা",
-    views: {
-      services: "নাগরিক পরিষেবা",
-      agents: "এজেন্ট নিয়ন্ত্রণ কক্ষ",
-      tracker: "আবেদনের অবস্থা",
-      assistant: "সরকার মিত্র",
-      admin: "আধিকারিক কার্যক্রম",
-    },
-    heading: "এক দেশ। সহজলভ্য পরিষেবা।",
-    lead: "পরিষেবা খুঁজুন, আবেদন প্রস্তুত করুন এবং অগ্রগতি দেখুন।",
-  },
-  mr: {
-    label: "मराठी",
-    views: {
-      services: "नागरिक सेवा",
-      agents: "एजंट नियंत्रण कक्ष",
-      tracker: "अर्जाची स्थिती",
-      assistant: "सरकार मित्र",
-      admin: "अधिकारी कामकाज",
-    },
-    heading: "एक राष्ट्र। सुलभ सेवा।",
-    lead: "सेवा शोधा, अर्ज तयार करा आणि प्रत्येक टप्प्याची माहिती मिळवा.",
-  },
-  ta: {
-    label: "தமிழ்",
-    views: {
-      services: "குடிமக்கள் சேவைகள்",
-      agents: "முகவர் கட்டுப்பாட்டு அறை",
-      tracker: "விண்ணப்ப நிலை",
-      assistant: "சர்க்கார் மித்ரா",
-      admin: "அலுவலர் செயல்பாடுகள்",
-    },
-    heading: "ஒரே நாடு. எளிதில் அணுகக்கூடிய சேவைகள்.",
-    lead: "சேவைகளைத் தேடி, விண்ணப்பங்களைத் தயாரித்து, முன்னேற்றத்தைப் பாருங்கள்.",
-  },
-};
-
-const SCHEMES: Scheme[] = [
-  {
-    id: "dbt",
-    name: "Direct Benefit Transfer",
-    department: "Benefit Delivery Department",
-    category: "Socio-Economic",
-    description:
-      "Prepare a benefit-transfer request and check document readiness.",
-    time: "Instant AI pre-check",
-    icon: Wallet,
-    documents: [
-      "Identity document available",
-      "Bank account evidence available",
-      "Scheme-specific supporting document available",
-    ],
-  },
-  {
-    id: "ration",
-    name: "Ration Card Renewal",
-    department: "Food & Public Distribution",
-    category: "Socio-Economic",
-    description:
-      "Review household details and prepare a renewal application.",
-    time: "Instant AI pre-check",
-    icon: FileSpreadsheet,
-    documents: [
-      "Existing ration card available",
-      "Address evidence available",
-      "Household details reviewed",
-    ],
-  },
-  {
-    id: "land",
-    name: "Land Revenue Records",
-    department: "State Revenue Department",
-    category: "Agriculture",
-    description:
-      "Organise land-record references for the relevant state authority.",
-    time: "Document-dependent",
-    icon: Leaf,
-    documents: [
-      "Land-record reference available",
-      "Identity document available",
-      "District and village details available",
-    ],
-  },
-  {
-    id: "pension",
-    name: "Pension Allocation",
-    department: "Social Welfare Department",
-    category: "Socio-Economic",
-    description:
-      "Prepare supporting information for pension eligibility assessment.",
-    time: "Instant AI pre-check",
-    icon: Users,
-    documents: [
-      "Identity document available",
-      "Age evidence available",
-      "Scheme-specific income evidence available",
-    ],
-  },
-  {
-    id: "education",
-    name: "Education Assistance",
-    department: "Education Department",
-    category: "Education",
-    description:
-      "Organise enrolment and supporting records for assistance schemes.",
-    time: "Instant AI pre-check",
-    icon: GraduationCap,
-    documents: [
-      "Enrolment evidence available",
-      "Academic records available",
-      "Scheme-specific supporting document available",
-    ],
-  },
-  {
-    id: "health",
-    name: "Healthcare Assistance",
-    department: "Health & Family Welfare",
-    category: "Healthcare",
-    description:
-      "Prepare the documents needed for healthcare support assessment.",
-    time: "Document-dependent",
-    icon: HeartPulse,
-    documents: [
-      "Identity document available",
-      "Relevant health records available",
-      "Scheme-specific supporting document available",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Small Business Support",
-    department: "Enterprise Development",
-    category: "Small Business",
-    description:
-      "Review business records before approaching the relevant scheme.",
-    time: "Instant AI pre-check",
-    icon: Building2,
-    documents: [
-      "Business details available",
-      "Identity document available",
-      "Financial supporting documents available",
-    ],
-  },
-];
-
-const CATEGORIES: Category[] = [
-  "All",
-  "Socio-Economic",
-  "Agriculture",
-  "Education",
-  "Healthcare",
-  "Small Business",
-];
-
-const INITIAL_APPLICATIONS: Application[] = [
-  {
-    id: "SKR-2026-9842",
-    applicant: "Asha Verma",
-    schemeId: "pension",
-    scheme: "Pension Allocation",
-    risk: "Low",
-    confidence: 98.6,
-    status: "Review ready",
-    stage: 5,
-    updatedAt: "2026-09-29T10:30:00.000Z",
-  },
-  {
-    id: "SKR-2026-9843",
-    applicant: "Ravi Kumar",
-    schemeId: "land",
-    scheme: "Land Revenue Records",
-    risk: "Medium",
-    confidence: 86.4,
-    status: "Manual audit",
-    stage: 3,
-    updatedAt: "2026-09-29T10:31:00.000Z",
-  },
-  {
-    id: "SKR-2026-9844",
-    applicant: "Meera Das",
-    schemeId: "ration",
-    scheme: "Ration Card Renewal",
-    risk: "Low",
-    confidence: 97.2,
-    status: "Review ready",
-    stage: 5,
-    updatedAt: "2026-09-29T10:32:00.000Z",
-  },
-  {
-    id: "SKR-2026-9845",
-    applicant: "Arun Rao",
-    schemeId: "enterprise",
-    scheme: "Small Business Support",
-    risk: "High Anomaly",
-    confidence: 62.8,
-    status: "Manual audit",
-    stage: 3,
-    updatedAt: "2026-09-29T10:33:00.000Z",
-  },
-  {
-    id: "SKR-2026-9846",
-    applicant: "Fatima Ali",
-    schemeId: "education",
-    scheme: "Education Assistance",
-    risk: "Low",
-    confidence: 96.9,
-    status: "Review ready",
-    stage: 5,
-    updatedAt: "2026-09-29T10:34:00.000Z",
-  },
-];
-
-const PIPELINE_STAGES = [
-  "Submitted",
-  "OCR Parsing",
-  "FraudGuard Audit",
-  "Policy Match",
-  "Certificate Preview",
-];
-
-const AGENTS: {
-  name: string;
-  description: string;
-  icon: LucideIcon;
-}[] = [
-  {
-    name: "Agent-OCR",
-    description:
-      "Text extraction and document checks for identity, income and land records.",
-    icon: FileText,
-  },
-  {
-    name: "Agent-FraudGuard",
-    description:
-      "Metadata anomalies, reference-hash checks and zero-trust validation.",
-    icon: Fingerprint,
-  },
-  {
-    name: "Agent-PolicyMatcher",
-    description:
-      "Versioned rule evaluation and evidence-based eligibility checks.",
-    icon: ShieldCheck,
-  },
-  {
-    name: "Agent-Router",
-    description:
-      "Department routing and exception dispatch to authorised officers.",
-    icon: Building2,
-  },
-];
-
-const LOG_EVENTS = [
-  {
-    agent: "Intake",
-    event: "payload.parsed",
-    confidence: null,
-    summary: "Required envelope fields found; processing record created.",
-    payload: { schema: "application.v1", documentCount: 3 },
-  },
-  {
-    agent: "Agent-OCR",
-    event: "document.fields_extracted",
-    confidence: 98.4,
-    summary: "Scenario document fields matched the expected schema.",
-    payload: { extractedFields: 12, missingFields: 0 },
-  },
-  {
-    agent: "Agent-FraudGuard",
-    event: "audit.completed",
-    confidence: 97.8,
-    summary:
-      "Scenario metadata checks passed. No biometric data was collected.",
-    payload: { anomalyCount: 0, biometricSource: "not_connected" },
-  },
-  {
-    agent: "Agent-PolicyMatcher",
-    event: "policy.evaluated",
-    confidence: 99.1,
-    summary: "Configured scenario rules matched the supplied example evidence.",
-    payload: { policyVersion: "scenario.v1", matchedRules: 4 },
-  },
-  {
-    agent: "Agent-Router",
-    event: "review.routed",
-    confidence: 98.6,
-    summary:
-      "Recommendation prepared for officer review; no benefit was sanctioned.",
-    payload: { destination: "department_review", recommendation: "approve" },
-  },
-  {
-    agent: "Registry",
-    event: "preview.ready",
-    confidence: null,
-    summary: "Unsigned processing-record preview is ready in the tracker.",
-    payload: { signature: "not_issued", status: "review_ready" },
-  },
-];
-
-let browserClient: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient | null {
-  if (browserClient) return browserClient;
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!url || !key) return null;
-
-browserClient = createClient(url, key, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-
-return browserClient;
-}
-
-function isOfficer(session: Session | null): boolean {
-  const role: unknown = session?.user.app_metadata?.role;
-  return role === "officer" || role === "admin";
-}
-
-function departmentOf(session: Session | null): string {
-  const department: unknown = session?.user.app_metadata?.department;
-  return typeof department === "string"
-    ? department
-    : isOfficer(session)
-      ? "Department not assigned"
-      : "Citizen access";
-}
-
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "medium",
-    timeZone: "Asia/Kolkata",
-  }).format(new Date(value));
-}
-
-function makeId(prefix: string): string {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
-
-function createReference(): string {
-  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
-  return `SKR-${new Date().getUTCFullYear()}-${suffix}`;
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "The request could not be completed. Please try again.";
-}
-
-/* -------------------------------------------------------------------------- */
-/* Shared UI                                                                  */
-/* -------------------------------------------------------------------------- */
-
-function Button({
-  children,
-  variant = "primary",
-  className = "",
-  type = "button",
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "quiet" | "danger";
-}) {
-  const variants = {
-    primary:
-      "border-[#1A365D] bg-[#1A365D] text-white hover:bg-[#0B192C]",
-    secondary:
-      "border-slate-300 bg-white text-[#1A365D] hover:bg-slate-50",
-    quiet:
-      "border-transparent bg-transparent text-[#1A365D] hover:bg-slate-100",
-    danger: "border-red-700 bg-red-700 text-white hover:bg-red-800",
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setError("");
+    try {
+      const { error } = authMode === "email" 
+        ? await supabase.auth.signInWithOtp({ email: contact })
+        : await supabase.auth.signInWithOtp({ phone: contact });
+      if (error) throw error;
+      setOtpSent(true);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-return (
-    <button
-      type={type}
-      className={`inline-flex min-h-11 items-center justify-center gap-2
-        rounded border px-4 py-2 font-semibold transition-colors
-        disabled:cursor-not-allowed disabled:opacity-50
-        ${variants[variant]} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Badge({
-  children,
-  tone = "neutral",
-}: {
-  children: ReactNode;
-  tone?: "neutral" | "green" | "amber" | "red";
-}) {
-  const colors = {
-    neutral: "border-slate-300 bg-slate-50 text-slate-700",
-    green: "border-green-300 bg-green-50 text-green-800",
-    amber: "border-amber-300 bg-amber-50 text-amber-900",
-    red: "border-red-300 bg-red-50 text-red-800",
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setError("");
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        [authMode === "email" ? "email" : "phone"]: contact,
+        token: otp,
+        type: authMode === "email" ? "email" : "sms"
+      } as any);
+      if (error) throw error;
+      setSession(data.session);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded border
-        px-2 py-1 text-xs font-semibold ${colors[tone]}`}
-    >
-      {children}
-    </span>
-  );
-}
+  const runPipeline = () => {
+    setPipelineActive(true);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 20;
+      setPipelineProgress(progress);
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => { setPipelineActive(false); setStep(4); }, 1000);
+      }
+    }, 1000);
+  };
 
-function RiskBadge({ risk }: { risk: Risk }) {
-  return (
-    <Badge
-      tone={risk === "Low" ? "green" : risk === "Medium" ? "amber" : "red"}
-    >
-      {risk === "High Anomaly" && (
-        <AlertTriangle size={13} aria-hidden="true" />
-      )}
-      {risk}
-    </Badge>
-  );
-}
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-slate-100 font-sans">
+        <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-8 space-y-6 shadow-2xl">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white mb-2">Sarkar Seva Portal</h1>
+            <p className="text-xs text-slate-400">SIH 2026 GovTech Authentication</p>
+          </div>
+          
+          <div className="flex bg-slate-900 p-1 rounded-xl text-xs font-medium">
+            <button onClick={() => { setAuthMode("email"); setOtpSent(false); }} className={`flex-1 py-2 rounded-lg ${authMode === "email" ? "bg-blue-600 text-white" : "text-slate-400"}`}>Email OTP</button>
+            <button onClick={() => { setAuthMode("phone"); setOtpSent(false); }} className={`flex-1 py-2 rounded-lg ${authMode === "phone" ? "bg-blue-600 text-white" : "text-slate-400"}`}>Mobile OTP</button>
+          </div>
 
-function Chakra({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="none"
-      aria-hidden="true"
-      className={className}
-    >
-      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="4" />
-      <circle cx="50" cy="50" r="7" fill="currentColor" />
-      {Array.from({ length: 24 }, (_, index) => (
-        <line
-          key={index}
-          x1="50"
-          y1="43"
-          x2="50"
-          y2="7"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          transform={`rotate(${index * 15} 50 50)`}
-        />
-      ))}
-    </svg>
-  );
-}
+          {error && <div className="p-3 bg-red-950/50 text-red-300 text-xs rounded-lg border border-red-800">{error}</div>}
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  action,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="max-w-3xl">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-600">
-          {eyebrow}
-        </p>
-        <h2 className="text-2xl font-bold tracking-tight text-[#0B192C] sm:text-3xl">
-          {title}
-        </h2>
-        <p className="mt-2 leading-7 text-slate-600">{description}</p>
+          {!otpSent ? (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <input type={authMode === "email" ? "email" : "tel"} required placeholder={authMode === "email" ? "Email Address" : "+91..."} value={contact} onChange={e => setContact(e.target.value)} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm outline-none text-white focus:border-blue-500 transition-colors" />
+              <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl text-sm font-medium flex justify-center text-white transition-colors disabled:opacity-50">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : "Send Secure OTP"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="text-xs text-slate-400 text-center">Code sent to {contact}</div>
+              <input type="text" maxLength={6} required placeholder="123456" value={otp} onChange={e => setOtp(e.target.value)} className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg tracking-widest font-mono text-white outline-none focus:border-emerald-500 transition-colors" />
+              <button disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-sm font-medium flex justify-center text-white transition-colors disabled:opacity-50">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin"/> : "Verify & Enter"}
+              </button>
+              <button type="button" onClick={() => setOtpSent(false)} className="w-full text-xs text-slate-400 hover:text-white pt-2">← Change contact info</button>
+            </form>
+          )}
+        </div>
       </div>
-      {action}
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+        <div className="p-6 border-b border-slate-800">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2"><Shield className="w-5 h-5 text-blue-500"/> Sarkar Seva</h2>
+          <p className="text-xs text-slate-500 mt-1">SIH 2026 Edition</p>
+        </div>
+        <nav className="flex-1 p-4 space-y-2 text-sm">
+          <button onClick={() => setCurrentView("landing")} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView === "landing" ? "bg-blue-600/20 text-blue-400" : "hover:bg-slate-800"}`}><Home className="w-4 h-4"/> Overview</button>
+          <button onClick={() => setCurrentView("workflow")} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView === "workflow" ? "bg-blue-600/20 text-blue-400" : "hover:bg-slate-800"}`}><FileText className="w-4 h-4"/> Services & Workflows</button>
+          <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400" : "hover:bg-slate-800"}`}><LayoutDashboard className="w-4 h-4"/> Admin Dashboard</button>
+          <button onClick={() => setCurrentView("chat")} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView === "chat" ? "bg-blue-600/20 text-blue-400" : "hover:bg-slate-800"}`}><MessageSquare className="w-4 h-4"/> AI Support Chat</button>
+        </nav>
+        <div className="p-4 border-t border-slate-800">
+          <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center gap-3 p-3 text-sm text-slate-400 hover:text-white transition"><LogOut className="w-4 h-4"/> Sign Out</button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> LangGraph Agents Online
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-xs text-slate-500 font-medium">{session.user.email || session.user.phone}</div>
+            <button onClick={() => supabase.auth.signOut()} className="md:hidden text-xs bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 text-slate-700">Logout</button>
+          </div>
+        </header>
+
+        <div className="p-4 md:p-8">
+          {/* VIEW: LANDING */}
+          {currentView === "landing" && (
+            <div className="max-w-4xl mx-auto space-y-6 text-center pt-8">
+              <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900">Welcome to Sarkar Seva</h1>
+              <p className="text-slate-500 max-w-lg mx-auto">Secure, Interoperable, Multi-Agent Government Services built for the citizens of the future.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+                <div onClick={() => setCurrentView("workflow")} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-500 cursor-pointer transition group">
+                  <FileText className="w-12 h-12 text-blue-600 mx-auto mb-4 group-hover:scale-110 transition-transform"/>
+                  <h3 className="font-bold text-slate-800 text-lg mb-2">Apply for Services</h3>
+                  <p className="text-xs text-slate-500">Access scheme eligibility and automated workflows.</p>
+                </div>
+                <div onClick={() => setCurrentView("admin")} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-500 cursor-pointer transition group">
+                  <LayoutDashboard className="w-12 h-12 text-emerald-600 mx-auto mb-4 group-hover:scale-110 transition-transform"/>
+                  <h3 className="font-bold text-slate-800 text-lg mb-2">Department Oversight</h3>
+                  <p className="text-xs text-slate-500">Monitor multi-agent transactions and data flows.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: 5-STEP WORKFLOW */}
+          {currentView === "workflow" && (
+            <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="flex text-xs font-semibold bg-slate-50 border-b border-slate-100 overflow-x-auto">
+                {["Request", "Consent", "Agents", "Data Sync", "Result"].map((lbl, i) => (
+                  <div key={lbl} className={`flex-1 min-w-[100px] p-3 md:p-4 text-center ${step >= i + 1 ? "text-blue-600 bg-blue-50/50 border-b-2 border-blue-600" : "text-slate-400"}`}>
+                    <span className="hidden md:inline">{i+1}. </span>{lbl}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="p-6 md:p-10">
+                {step === 1 && (
+                  <div className="space-y-5 animate-in fade-in zoom-in duration-300">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">Request Review & Details</h2>
+                      <p className="text-xs text-slate-500 mt-1">Select your required service and verify your credentials.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Target Service</label>
+                        <select className="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" value={formData.scheme} onChange={e => setFormData({...formData, scheme: e.target.value})}>
+                          <option>Housing Scheme Eligibility</option>
+                          <option>Income Certificate Issuance</option>
+                          <option>Ration Subsidy Request</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Full Legal Name</label>
+                        <input type="text" placeholder="E.g. Ramesh Kumar" className="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}/>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Secure Identifier</label>
+                        <input type="text" disabled value="[Aadhaar Redacted]" className="w-full p-3 border border-slate-300 bg-slate-100 text-slate-500 rounded-xl text-sm font-mono cursor-not-allowed"/>
+                      </div>
+                      <button onClick={() => setStep(2)} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-medium transition-colors mt-2">Proceed to Consent</button>
+                    </div>
+                  </div>
+                )}
+                
+                {step === 2 && (
+                  <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">Consent & Authorization Gate</h2>
+                      <p className="text-xs text-slate-500 mt-1">Review data fetching requirements before executing the AI pipeline.</p>
+                    </div>
+                    <div className="bg-amber-50 p-5 rounded-xl border border-amber-200 text-sm text-amber-900 leading-relaxed">
+                      <strong>Mandatory Interoperability Notice:</strong><br/> 
+                      To process this request, Sarkar Seva must execute cross-departmental queries via standardized APIs. Records fetched will include Land Registry, Revenue Dept databases, and Secure Identity Verification.
+                    </div>
+                    <label className="flex items-start gap-3 cursor-pointer p-2 hover:bg-slate-50 rounded-lg">
+                      <input type="checkbox" checked={formData.consent} onChange={e => setFormData({...formData, consent: e.target.checked})} className="mt-1 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"/>
+                      <span className="text-sm text-slate-700">I provide explicit digital consent to authorize automated cross-department data fetching for this specific transaction.</span>
+                    </label>
+                    <div className="flex gap-3 pt-4">
+                      <button onClick={() => setStep(1)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-medium transition-colors">Back</button>
+                      <button disabled={!formData.consent} onClick={() => { setStep(3); runPipeline(); }} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">Authorize & Orchestrate</button>
+                    </div>
+                  </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-8 text-center animate-in fade-in duration-500 py-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">Multi-Agent Orchestration</h2>
+                      <p className="text-xs text-slate-500 mt-1">LangGraph pipeline is securely processing your request...</p>
+                    </div>
+                    
+                    <div className="relative">
+                      <Activity className="w-16 h-16 text-blue-600 mx-auto animate-pulse"/>
+                      {pipelineProgress >= 100 && <CheckCircle2 className="w-6 h-6 text-emerald-500 absolute top-0 right-1/2 translate-x-10 -translate-y-2 bg-white rounded-full"/>}
+                    </div>
+
+                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden shadow-inner">
+                      <div className="bg-blue-600 h-full transition-all duration-500 ease-out" style={{width: `${pipelineProgress}%`}}></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono text-left bg-slate-50 p-5 rounded-xl border border-slate-200">
+                      <div className={`p-2 rounded ${pipelineProgress > 10 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>1. Request Agent (Intent Match)</div>
+                      <div className={`p-2 rounded ${pipelineProgress > 30 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>2. Routing Agent (API Mapping)</div>
+                      <div className={`p-2 rounded ${pipelineProgress > 50 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>3. Data Agents (Cross-Query)</div>
+                      <div className={`p-2 rounded ${pipelineProgress > 70 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>4. Validation (Anomaly Check)</div>
+                      <div className={`p-2 rounded ${pipelineProgress > 85 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>5. Consent & Security Gate</div>
+                      <div className={`p-2 rounded ${pipelineProgress > 95 ? "bg-blue-100/50 text-blue-700 font-medium" : "text-slate-400"}`}>6. Response (Payload Ready)</div>
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div className="space-y-5 animate-in slide-in-from-bottom-4 duration-300">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">Data Exchange Ledger</h2>
+                      <p className="text-xs text-slate-500 mt-1">Review the standardized JSON response securely fetched via APIs.</p>
+                    </div>
+                    <pre className="bg-slate-900 text-emerald-400 p-5 rounded-xl text-xs overflow-x-auto border border-slate-800 shadow-inner">
+{`{
+  "transaction_id": "TXN-9912-OP",
+  "timestamp": "${new Date().toISOString()}",
+  "services": {
+    "identity_portal": { 
+      "status": 200, 
+      "name_match": true,
+      "uid_status": "VALIDATED"
+    },
+    "revenue_dept": { 
+      "status": 200, 
+      "income_threshold_met": true,
+      "land_record_clear": true
+    }
+  },
+  "security": {
+    "consent_verified": true,
+    "privacy": "Pll masked at edge via AES-256"
+  }
+}`}
+                    </pre>
+                    <button onClick={() => setStep(5)} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl text-sm font-medium transition-colors">Generate Final Result</button>
+                  </div>
+                )}
+
+                {step === 5 && (
+                  <div className="text-center space-y-6 animate-in zoom-in duration-500 py-6">
+                    <div className="relative inline-block">
+                      <div className="absolute inset-0 bg-emerald-100 rounded-full animate-ping opacity-75"></div>
+                      <CheckCircle2 className="w-20 h-20 text-emerald-500 relative z-10"/>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-slate-800">Eligible & Approved</h2>
+                      <p className="text-sm text-slate-500 mt-1">Your multi-agent verification completed successfully.</p>
+                    </div>
+                    
+                    <div className="bg-slate-50 p-6 border border-slate-200 rounded-xl text-left text-sm space-y-3 shadow-sm max-w-sm mx-auto">
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">App ID:</span><span className="font-mono font-bold text-blue-600">HS-2026-88421</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Service:</span><span className="font-medium">{formData.scheme}</span></div>
+                      <div className="flex justify-between border-b pb-2"><span className="text-slate-500">Applicant:</span><span className="font-medium">{formData.name || "Citizen"}</span></div>
+                      <div className="flex justify-between pt-1"><span className="text-slate-500">Status:</span><span className="text-emerald-600 font-bold">Auto-Approved</span></div>
+                    </div>
+                    
+                    <button onClick={() => { setStep(1); setFormData({name: "", dob: "", scheme: "Housing Scheme Eligibility", consent: false}); }} className="w-full max-w-sm mx-auto bg-slate-100 hover:bg-slate-200 text-slate-800 py-3.5 rounded-xl text-sm font-medium transition-colors border border-slate-300">
+                      Start New Request
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: ADMIN DASHBOARD */}
+          {currentView === "admin" && (
+            <div className="space-y-6 animate-in fade-in">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Department Oversight</h1>
+                <p className="text-sm text-slate-500">Monitor active cross-department AI validations in real-time.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h2 className="font-semibold text-slate-700">Live Interoperability Queue</h2>
+                    <span className="text-xs bg-white border px-2 py-1 rounded text-slate-500">Auto-refresh active</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="text-slate-400 border-b">
+                        <tr><th className="p-4 font-medium">App ID</th><th className="p-4 font-medium">Name</th><th className="p-4 font-medium">Service</th><th className="p-4 font-medium">Status</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        <tr className="hover:bg-slate-50">
+                          <td className="p-4 font-mono text-slate-900">HS-2026-88421</td><td className="p-4 font-medium">Verified Citizen</td><td className="p-4 text-slate-600">Housing Scheme</td>
+                          <td className="p-4"><span className="bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-xs font-medium">✓ Cleared</span></td>
+                        </tr>
+                        <tr className="bg-red-50/30 hover:bg-red-50/50">
+                          <td className="p-4 font-mono text-slate-900">IC-2026-11234</td><td className="p-4 font-medium">John Doe</td><td className="p-4 text-slate-600">Income Cert</td>
+                          <td className="p-4"><span className="bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-medium">⚠️ Anomaly</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
+                  <div>
+                    <h2 className="font-semibold text-slate-800 border-b pb-3 mb-4 text-sm flex justify-between">
+                      AI Agent Flag 
+                      <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px]">Action Required</span>
+                    </h2>
+                    <div className="p-4 bg-slate-50 border rounded-xl text-xs text-slate-700 space-y-3">
+                      <p><strong className="text-slate-900">Issue: IC-2026-11234</strong></p>
+                      <p>Validation Agent detected a name mismatch between external databases.</p>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex justify-between bg-white p-2.5 rounded border border-red-200"><span className="text-slate-500">Revenue DB:</span><span className="font-medium text-red-600">J. Doe</span></div>
+                        <div className="flex justify-between bg-white p-2.5 rounded border border-slate-200"><span className="text-slate-500">Identity DB:</span><span className="font-medium">John Doe</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-6">
+                    <button className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl font-medium text-xs hover:bg-blue-700 transition">Approve Exception</button>
+                    <button className="flex-1 bg-white border border-slate-300 text-slate-700 py-2.5 rounded-xl font-medium text-xs hover:bg-slate-50 transition">Reject</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: CHAT INQUIRY */}
+          {currentView === "chat" && (
+            <div className="max-w-3xl mx-auto h-[600px] flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in">
+              <div className="bg-slate-900 p-4 text-white font-bold flex items-center gap-3">
+                <div className="bg-blue-600 p-2 rounded-lg"><MessageSquare className="w-5 h-5"/></div>
+                <div>
+                  <div className="text-sm">Citizen Support AI</div>
+                  <div className="text-[10px] text-slate-400 font-normal flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Online</div>
+                </div>
+              </div>
+              
+              <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${m.role === "user" ? "bg-blue-600 text-white rounded-br-none" : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"}`}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="p-4 bg-white border-t border-slate-200">
+                <form onSubmit={(e) => { e.preventDefault(); if(chatInput) { setMessages([...messages, {role:"user", text:chatInput}]); setChatInput(""); } }} className="flex gap-2">
+                  <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} className="flex-1 border border-slate-300 bg-slate-50 p-3.5 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-colors text-sm" placeholder="Ask about scheme eligibility or status..."/>
+                  <button type="submit" disabled={!chatInput} className="bg-blue-600 text-white p-3.5 rounded-xl disabled:opacity-50 hover:bg-blue-700 transition-colors"><Send className="w-5 h-5"/></button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
-
-function Field({
-  label,
-  children,
-  hint,
-}: {
-  label: string;
-  children: ReactNode;
-  hint?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-semibold text-slate-800">
-        {label}
-      </span>
-      {children}
-      {hint && (
-        <span className="mt-1.5 block text-xs leading-5 text-slate-600">
-          {hint}
-        </span>
-      )}
-    </label>
-  );
-}
-
-const INPUT =
-  "min-h-11 w-full rounded border border-slate-400 bg-white px-3 py-2 text-slate-900";
-
-function Modal({
-  title,
-  children,
-  onClose,
-  wide = false,
-}: {
-  title: string;
-  children: ReactNode;
-  onClose: () => void;
-  wide?: boolean;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
-
-useEffect(() => {
-    const node = dialog.current;
-    const previous = document.activeElement as HTMLElement | null;
-    const oldOverflow = document.body.style.overflow;
-
-node?.showModal();
-    document.body.style.overflow = "hidden";
-
-return () => {
-      node?.close();
-      document.body.style.overflow = oldOverflow;
-      previous?.focus();
-    };
-  }, []);
-
-return (
-    <dialog
-      ref={dialog}
-      aria-labelledby={titleId}
-      className={`m-auto max-h-[90dvh] w-[calc(100%-2rem)] overflow-auto
-        rounded-md border border-slate-300 bg-white p-0 text-slate-900
-        shadow-xl backdrop:bg-slate-950/60
-        ${wide ? "max-w-3xl" : "max-w-lg"}`}
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target !== event.currentTarget) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        if (
-          event.clientX < rect.left ||
-          event.clientX > rect.right ||
-          event.clientY < rect.top ||
-          event.clientY > rect.bottom
-        ) {
-          onClose();
-        }
-      }}
-    >
-      <div className="flex items-center justify-between gap-4 border-b p-5">
-        <h2 id={titleId} className="text-xl font-bold text-[#1A365D]">
-          {title}
-        </h2>
-        <Button
-          variant="quiet"
-          aria-label={`Close ${title}`}
-          onClick={onClose}
-          className="shrink-0 px-3"
-        >
-          <X size={20} aria-hidden="true" />
-        </Button>
-      </div>
-      <div className="p-5 sm:p-6">{children}</div>
-    </dialog>
-  );
-}
-
-/* Safe, intentionally small Markdown renderer.
- * React escapes text; no raw HTML or untrusted links are rendered.
- */
-function MarkdownText({ text }: { text: string }) {
-  const inline = (line: string) =>
-    line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, index) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={index}>{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith("`") && part.endsWith("`")) {
-        return (
-          <code key={index} className="rounded bg-slate-100 px-1 text-sm">
-            {part.slice(1, -1)}
-          </code>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
-
-const lines = text.split("\n");
-  const blocks: ReactNode[] = [];
-
-for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-
-if (line.startsWith("- ")) {
-      const items: string[] = [line.slice(2)];
-      while (i + 1 < lines.length && lines[i + 1].startsWith("- ")) {
-        i += 1;
-        items.push(lines[i].slice(2));
-      }
-      blocks.push(
-        <ul key={`list-${i}`} className="list-disc space-y-1 pl-5">
-          {items.map((item, index) => (
-            <li key={index}>{inline(item)}</li>
-          ))}
-        </ul>,
-      );
-    } else if (line.startsWith("### ")) {
-      blocks.push(
-        <h3 key={i} className="font-bold text-[#1A365D]">
-          {inline(line.slice(4))}
-        </h3>,
-      );
-    } else {
-      blocks.push(<p key={i}>{inline(line)}</p>);
-    }
-  }
-
-return <div className="space-y-3 leading-7">{blocks}</div>;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Supabase authentication                                                    */
-/* -------------------------------------------------------------------------- */
-
-function AuthDialog({
-  client,
-  onClose,
-  onNotice,
-}: {
-  client: SupabaseClient | null;
-  onClose: () => void;
-  onNotice: (message: string) => void;
-}) {
-  const [mode, setMode] = useState<"citizen" | "officer">("citizen");
-  const [method, setMethod] = useState<"login" | "signup" | "otp">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [token, setToken] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failure, setFailure] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const alive = useRef(true);
-
-useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
-
-useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown((n) => n - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [cooldown]);
-
-async function finish(session: Session | null) {
-    if (!session) return false;
-
-if (mode === "officer" && !isOfficer(session)) {
-      setFailure(true);
-      setMessage(
-        "Signed in with citizen access. This account has no officer role. " +
-          "Selecting Officer Access does not grant additional permissions.",
-      );
-      return true;
-    }
-
-onNotice(
-      isOfficer(session)
-        ? "Officer session established."
-        : "Citizen session established.",
-    );
-    onClose();
-    return true;
-  }
-
-async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy) return;
-
-setMessage("");
-    setFailure(false);
-
-if (!client) {
-      setFailure(true);
-      setMessage(
-        "Authentication is not configured. Set the public Supabase URL and key.",
-      );
-      return;
-    }
-
-setBusy(true);
-
-try {
-      const normalisedEmail = email.trim();
-
-if (method === "login") {
-        const { data, error } = await client.auth.signInWithPassword({
-          email: normalisedEmail,
-          password,
-        });
-        if (error) throw error;
-        if (!alive.current) return;
-        await finish(data.session);
-      } else if (method === "signup") {
-        if (mode === "officer") {
-          throw new Error("Officer accounts must be provisioned by an administrator.");
-        }
-
-const { data, error } = await client.auth.signUp({
-          email: normalisedEmail,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin + window.location.pathname,
-          },
-        });
-
-if (error) throw error;
-        if (!alive.current) return;
-
-if (!(await finish(data.session))) {
-          setMessage(
-            "Check your email for confirmation instructions, if registration is available.",
-          );
-        }
-      } else if (!otpSent) {
-        if (cooldown > 0) return;
-
-const { error } = await client.auth.signInWithOtp({
-          email: normalisedEmail,
-          options: {
-            // Registration has its own explicit flow.
-            shouldCreateUser: false,
-            emailRedirectTo: window.location.origin + window.location.pathname,
-          },
-        });
-
-if (error) throw error;
-        if (!alive.current) return;
-
-setOtpSent(true);
-        setCooldown(60);
-        setMessage("If the account is eligible, a sign-in code has been sent.");
-      } else {
-        const { data, error } = await client.auth.verifyOtp({
-          email: normalisedEmail,
-          token: token.trim(),
-          type: "email",
-        });
-
-if (error) throw error;
-        if (!alive.current) return;
-        await finish(data.session);
-      }
-    } catch {
-      if (alive.current) {
-        setFailure(true);
-        setMessage(
-          "Authentication could not be completed. Check your details, code " +
-            "and email confirmation, or try again later.",
-        );
-      }
-    } finally {
-      if (alive.current) setBusy(false);
-    }
-  }
-
-function changeMethod(next: "login" | "signup" | "otp") {
-    setMethod(next);
-    setOtpSent(false);
-    setToken("");
-    setPassword("");
-    setMessage("");
-  }
-
-return (
-    <Modal title="Citizen / Officer Single Sign-On" onClose={onClose}>
-      <div className="mb-5 flex items-start gap-3 rounded border bg-slate-50 p-4">
-        <Lock className="mt-0.5 shrink-0 text-[#1A365D]" size={20} aria-hidden="true" />
-        <p className="text-sm leading-6">
-          Email authentication through Supabase. Officer permissions are assigned
-          by an authorised administrator.
-        </p>
-      </div>
-
-<form onSubmit={submit} className="space-y-5" aria-busy={busy}>
-        <fieldset disabled={busy} className="space-y-4">
-          <legend className="mb-2 text-sm font-semibold">Access mode</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(["citizen", "officer"] as const).map((value) => (
-              <label
-                key={value}
-                className={`flex min-h-12 cursor-pointer items-center gap-2
-                  rounded border p-3 text-sm font-semibold
-                  ${mode === value ? "border-[#1A365D] bg-blue-50" : "border-slate-300"}`}
-              >
-                <input
-                  type="radio"
-                  name="access-mode"
-                  checked={mode === value}
-                  onChange={() => {
-                    setMode(value);
-                    if (value === "officer" && method === "signup") {
-                      changeMethod("login");
-                    }
-                    setMessage("");
-                  }}
-                />
-                {value === "citizen" ? "Citizen Access" : "Officer / Admin Access"}
-              </label>
-            ))}
-          </div>
-
-<Field label="Sign-in method">
-            <select
-              className={INPUT}
-              value={method}
-              onChange={(event) =>
-                changeMethod(event.target.value as "login" | "signup" | "otp")
-              }
-            >
-              <option value="login">Email and password</option>
-              <option value="otp">Email one-time code</option>
-              {mode === "citizen" && <option value="signup">Create citizen account</option>}
-            </select>
-          </Field>
-
-<Field label="Email address">
-            <input
-              className={INPUT}
-              type="email"
-              autoComplete="email"
-              maxLength={254}
-              required
-              readOnly={otpSent}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="name@example.com"
-            />
-          </Field>
-
-{method !== "otp" && (
-            <Field
-              label="Password"
-              hint={
-                method === "signup"
-                  ? "Use at least 12 characters. Project password policies also apply."
-                  : undefined
-              }
-            >
-              <input
-                className={INPUT}
-                type="password"
-                required
-                minLength={method === "signup" ? 12 : 1}
-                maxLength={128}
-                autoComplete={method === "signup" ? "new-password" : "current-password"}
-                value={password}
-                onChange={(event)
-
