@@ -5,7 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
-  Lock, ChevronRight, UserCircle, Database, Network
+  Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
+  Paperclip, Mic, Building, Users
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
@@ -13,12 +14,25 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydw
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Real Gov Services based on National Portal
+const REAL_SERVICES = [
+  "Senior Citizen Registration",
+  "Online Marriage Registration",
+  "Ayushman Bharat Card",
+  "PAN Card Services",
+  "Jeevan Pramaan (Life Certificate)",
+  "Housing Scheme Eligibility",
+  "Income Certificate Issuance"
+];
+
 export default function SarkarSevaApp() {
   // --- STATE MANAGEMENT ---
   const [session, setSession] = useState<any>(null);
   const [currentView, setCurrentView] = useState("services");
+  const [userRole, setUserRole] = useState<"citizen" | "official">("citizen");
 
   // Auth State
+  const [loginTab, setLoginTab] = useState<"citizen" | "official">("citizen");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
   const [contact, setContact] = useState("");
   const [otp, setOtp] = useState("");
@@ -26,16 +40,20 @@ export default function SarkarSevaApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // Workflow State (5 Steps)
+  // Workflow State
+  const [searchQuery, setSearchQuery] = useState("");
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ name: "", dob: "", scheme: "Housing Scheme Eligibility", consent: false });
+  const [formData, setFormData] = useState({ name: "", dob: "", scheme: "Ayushman Bharat Card", consent: false });
   const [pipelineProgress, setPipelineProgress] = useState(0);
   const [activeAgent, setActiveAgent] = useState("");
   const [txId, setTxId] = useState("");
+  const workflowRef = useRef<HTMLDivElement>(null);
 
   // Chat State
+  const [chatLanguage, setChatLanguage] = useState("English");
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState([
     { role: "agent", text: "Namaste. I am Sarkar Mitra, your AI guide. How can I assist you with government services today?" }
   ]);
@@ -79,6 +97,8 @@ export default function SarkarSevaApp() {
         type: authMode === "email" ? "email" : "sms"
       } as any);
       if (error) throw error;
+      setUserRole(loginTab);
+      setCurrentView(loginTab === "official" ? "admin" : "services");
       setSession(data.session);
     } catch (err: any) {
       setAuthError(err.message);
@@ -88,6 +108,12 @@ export default function SarkarSevaApp() {
   };
 
   // --- WORKFLOW SIMULATION ---
+  const triggerServiceWorkflow = (serviceName: string) => {
+    setFormData({ ...formData, scheme: serviceName });
+    setStep(1);
+    workflowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const runPipeline = () => {
     setStep(3);
     setPipelineProgress(0);
@@ -122,9 +148,8 @@ export default function SarkarSevaApp() {
     setChatInput("");
     setChatLoading(true);
 
-    // Simulate Agent processing
     setTimeout(() => {
-      let reply = "I have securely checked the departmental knowledge base. Can you provide more details so I can route your request accurately?";
+      let reply = `I have securely checked the departmental knowledge base in ${chatLanguage}. Can you provide more details so I can route your request accurately?`;
       if (userMsg.toLowerCase().includes("housing") || userMsg.toLowerCase().includes("scheme")) {
         reply = "For the Housing Scheme, our agents will cross-verify your Income Certificate and Land Records. You can start the application in the 'Citizen Services' tab.";
       } else if (userMsg.toLowerCase().includes("status")) {
@@ -135,6 +160,25 @@ export default function SarkarSevaApp() {
     }, 1800);
   };
 
+  const simulateUpload = () => {
+    setMessages(prev => [...prev, { role: "user", text: "[Document Uploaded: ID_Proof.pdf]" }]);
+    setChatLoading(true);
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: "agent", text: "Document received and passed to the OCR Agent. Data has been securely extracted and masked." }]);
+      setChatLoading(false);
+    }, 2000);
+  };
+
+  const simulateVoice = () => {
+    setIsRecording(!isRecording);
+    if (!isRecording) {
+      setTimeout(() => {
+        setIsRecording(false);
+        setChatInput("How do I apply for a PAN card?");
+      }, 2500);
+    }
+  };
+
   // ==========================================
   // VIEW: UNAUTHENTICATED (LOGIN PORTAL)
   // ==========================================
@@ -142,18 +186,23 @@ export default function SarkarSevaApp() {
     return (
       <div className="min-h-screen bg-slate-50 flex font-sans">
         {/* Left Side: Govt Branding */}
-        <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#0f172a] text-white p-12 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500 via-white to-green-500 opacity-80"></div>
+        <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#002147] text-white p-12 relative overflow-hidden">
+          {/* India Flag Gradient */}
+          <div className="absolute top-0 left-0 w-full h-3 flex">
+            <div className="h-full w-1/3 bg-[#FF9933]"></div>
+            <div className="h-full w-1/3 bg-white"></div>
+            <div className="h-full w-1/3 bg-[#138808]"></div>
+          </div>
           
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-12">
-              <Landmark className="w-10 h-10 text-orange-400" />
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">SARKAR SEVA</h1>
-                <p className="text-xs text-slate-400 font-mono tracking-widest uppercase">Government of India</p>
-              </div>
+          <div className="relative z-10 flex flex-col items-start gap-4">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/Seal_of_Maharashtra.svg" alt="Govt Logo" className="w-20 h-20 bg-white rounded-full p-1" />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">SARKAR SEVA</h1>
+              <p className="text-sm text-slate-300 font-mono tracking-widest uppercase">Government of Maharashtra</p>
             </div>
-            
+          </div>
+
+          <div className="relative z-10">
             <h2 className="text-5xl font-extrabold leading-tight mb-6">
               Next-Generation<br/>GovTech Interoperability
             </h2>
@@ -161,29 +210,30 @@ export default function SarkarSevaApp() {
               Powered by a secure LangGraph multi-agent swarm. We ensure transparent, automated, and tamper-proof citizen services.
             </p>
           </div>
-
-          <div className="relative z-10 grid grid-cols-2 gap-6 mt-12">
-            <div className="bg-white/5 border border-white/10 p-5 rounded-xl">
-              <Network className="w-8 h-8 text-blue-400 mb-3" />
-              <h3 className="font-semibold mb-1">Multi-Agent Swarm</h3>
-              <p className="text-xs text-slate-400">7 dedicated AI agents handling request routing and validation.</p>
-            </div>
-            <div className="bg-white/5 border border-white/10 p-5 rounded-xl">
-              <Shield className="w-8 h-8 text-emerald-400 mb-3" />
-              <h3 className="font-semibold mb-1">Privacy First</h3>
-              <p className="text-xs text-slate-400">Strict AES-256 edge masking for all sensitive identifiers.</p>
-            </div>
-          </div>
         </div>
 
-        {/* Right Side: Login Form */}
+        {/* Right Side: Dual Login Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-blue-600 to-green-500 lg:hidden"></div>
-          
           <div className="w-full max-w-md space-y-8">
-            <div className="text-center lg:text-left">
+            <div className="text-center lg:text-left mb-6">
               <h2 className="text-3xl font-bold text-slate-900">Official Portal Access</h2>
-              <p className="text-sm text-slate-500 mt-2">Authenticate via secure OTP to access your dashboard.</p>
+              <p className="text-sm text-slate-500 mt-2">Select your portal and authenticate via secure OTP.</p>
+            </div>
+
+            {/* Login Tabs */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+              <button 
+                onClick={() => { setLoginTab("citizen"); setOtpSent(false); }}
+                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Users className="w-4 h-4"/> Citizen Portal
+              </button>
+              <button 
+                onClick={() => { setLoginTab("official"); setOtpSent(false); }}
+                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <Building className="w-4 h-4"/> Dept Official
+              </button>
             </div>
 
             {authError && (
@@ -193,23 +243,32 @@ export default function SarkarSevaApp() {
               </div>
             )}
 
-            <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200">
-              <button onClick={() => { setAuthMode("email"); setOtpSent(false); }} className={`flex-1 py-2.5 rounded-lg transition-all ${authMode === "email" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Email OTP</button>
-              <button onClick={() => { setAuthMode("phone"); setOtpSent(false); }} className={`flex-1 py-2.5 rounded-lg transition-all ${authMode === "phone" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Mobile OTP</button>
-            </div>
-
             {!otpSent ? (
               <form onSubmit={handleSendOtp} className="space-y-5">
+                {loginTab === "citizen" && (
+                  <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200 mb-4">
+                    <button type="button" onClick={() => setAuthMode("email")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "email" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Email OTP</button>
+                    <button type="button" onClick={() => setAuthMode("phone")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "phone" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Mobile OTP</button>
+                  </div>
+                )}
+                
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    {authMode === "email" ? "Registered Email" : "Registered Mobile (+91)"}
+                    {loginTab === "official" ? "Official Govt Email (.gov.in)" : authMode === "email" ? "Registered Email" : "Registered Mobile (+91)"}
                   </label>
                   <div className="relative">
                     <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input type={authMode === "email" ? "email" : "tel"} required placeholder={authMode === "email" ? "citizen@example.com" : "+91..."} value={contact} onChange={e => setContact(e.target.value)} className="w-full pl-10 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" />
+                    <input 
+                      type={authMode === "email" || loginTab === "official" ? "email" : "tel"} 
+                      required 
+                      placeholder={loginTab === "official" ? "officer@maharashtra.gov.in" : authMode === "email" ? "citizen@example.com" : "+91..."} 
+                      value={contact} 
+                      onChange={e => setContact(e.target.value)} 
+                      className="w-full pl-10 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                    />
                   </div>
                 </div>
-                <button disabled={authLoading} className="w-full bg-[#0f172a] hover:bg-blue-900 text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70">
+                <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
                 </button>
               </form>
@@ -222,10 +281,9 @@ export default function SarkarSevaApp() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Enter 6-Digit Code</label>
                   <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" />
                 </div>
-                <button disabled={authLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-medium flex justify-center transition-all disabled:opacity-70">
+                <button disabled={authLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-medium flex justify-center transition-all disabled:opacity-70">
                   {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Authenticate"}
                 </button>
-                <button type="button" onClick={() => setOtpSent(false)} className="w-full text-sm text-slate-500 hover:text-slate-800 underline underline-offset-4">Wrong contact info? Go back</button>
               </form>
             )}
           </div>
@@ -240,23 +298,31 @@ export default function SarkarSevaApp() {
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
       {/* --- SIDEBAR --- */}
-      <aside className="w-64 bg-[#0f172a] text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
-        <div className="h-1 w-full bg-gradient-to-r from-orange-500 via-white to-green-500"></div>
+      <aside className="w-64 bg-[#002147] text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
+        <div className="h-1 w-full flex">
+            <div className="h-full w-1/3 bg-[#FF9933]"></div>
+            <div className="h-full w-1/3 bg-white"></div>
+            <div className="h-full w-1/3 bg-[#138808]"></div>
+        </div>
         <div className="p-6">
           <div className="flex items-center gap-3 text-white mb-1">
-            <Landmark className="w-6 h-6 text-orange-400" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/Seal_of_Maharashtra.svg" alt="Logo" className="w-8 h-8 bg-white rounded-full p-0.5" />
             <span className="text-xl font-bold tracking-wide">SARKAR SEVA</span>
           </div>
-          <div className="text-[10px] font-mono tracking-widest uppercase text-slate-500 pl-9">SIH 2026 Edition</div>
+          <div className="text-[10px] font-mono tracking-widest uppercase text-slate-400 pl-11">Mahasrashtra Portal</div>
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-2">
-          <button onClick={() => setCurrentView("services")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "services" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "hover:bg-white/5 hover:text-white"}`}>
-            <FileText className="w-5 h-5" /> <span className="font-medium text-sm">Citizen Services</span>
-          </button>
-          <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-white/5 hover:text-white"}`}>
-            <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">Dept Dashboard</span>
-          </button>
+          {userRole === "citizen" && (
+            <button onClick={() => setCurrentView("services")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "services" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "hover:bg-white/5 hover:text-white"}`}>
+              <FileText className="w-5 h-5" /> <span className="font-medium text-sm">Citizen Services</span>
+            </button>
+          )}
+          {userRole === "official" && (
+            <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-white/5 hover:text-white"}`}>
+              <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">Dept Dashboard</span>
+            </button>
+          )}
           <button onClick={() => setCurrentView("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "chat" ? "bg-purple-600/20 text-purple-400 border border-purple-500/30" : "hover:bg-white/5 hover:text-white"}`}>
             <MessageSquare className="w-5 h-5" /> <span className="font-medium text-sm">Sarkar Mitra AI</span>
           </button>
@@ -267,7 +333,7 @@ export default function SarkarSevaApp() {
             <UserCircle className="w-8 h-8 text-slate-400" />
             <div className="overflow-hidden">
               <div className="text-xs text-white truncate">{session.user.email || session.user.phone}</div>
-              <div className="text-[10px] text-emerald-400 flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div> Verified</div>
+              <div className="text-[10px] text-emerald-400 flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div> {userRole === 'official' ? 'Dept Officer' : 'Verified Citizen'}</div>
             </div>
           </div>
           <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-white transition-colors">
@@ -280,9 +346,12 @@ export default function SarkarSevaApp() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* TOP HEADER */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
-          <h2 className="text-lg font-bold text-slate-800 capitalize">
-            {currentView === "services" ? "Welfare Services Portal" : currentView === "admin" ? "Department Oversight" : "AI Support Portal"}
-          </h2>
+          <div className="flex items-center gap-2">
+             <img src="https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg" alt="India" className="h-5 w-7 rounded-sm shadow-sm border border-slate-200" />
+             <h2 className="text-lg font-bold text-slate-800 ml-2">
+              {currentView === "services" ? "india.gov.in Beta Portal" : currentView === "admin" ? "Department Oversight" : "AI Support Portal"}
+             </h2>
+          </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-sm">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -293,158 +362,198 @@ export default function SarkarSevaApp() {
         </header>
 
         {/* SCROLLABLE VIEW CONTAINER */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="flex-1 overflow-y-auto bg-slate-100">
 
           {/* ==========================================
-              VIEW 1: CITIZEN SERVICES (5-STEP WORKFLOW)
+              VIEW 1: CITIZEN SERVICES (Search & 5-Step)
               ========================================== */}
           {currentView === "services" && (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                
-                {/* Progress Stepper */}
-                <div className="bg-slate-50 border-b border-slate-200 px-2 py-3 flex overflow-x-auto scrollbar-hide">
-                  {["Request", "Consent", "Agent Swarm", "Data Ledger", "Result"].map((lbl, i) => (
-                    <div key={lbl} className={`flex-1 min-w-[120px] text-center px-2 py-2 border-b-2 transition-all duration-300 ${step >= i + 1 ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400"}`}>
-                      <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${step >= i + 1 ? "text-blue-600" : "text-slate-400"}`}>Step 0{i + 1}</div>
-                      <div className="text-sm font-medium">{lbl}</div>
-                    </div>
-                  ))}
+            <div>
+              {/* National Portal Style Search Header */}
+              <div className="bg-[#002147] text-white py-12 px-6 shadow-md relative overflow-hidden">
+                <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Emblem" className="w-96 h-96 -mt-20 -mr-20" />
                 </div>
-
-                <div className="p-6 md:p-10 min-h-[450px]">
-                  {/* STEP 1: Details */}
-                  {step === 1 && (
-                    <div className="max-w-xl mx-auto space-y-6 animate-in fade-in duration-500">
-                      <div className="text-center mb-8">
-                        <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-4"><FileText className="w-6 h-6" /></div>
-                        <h3 className="text-2xl font-bold text-slate-900">Application Details</h3>
-                        <p className="text-sm text-slate-500 mt-2">Select a scheme. Our AI agents will handle the verification.</p>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Target Scheme</label>
-                          <select value={formData.scheme} onChange={e => setFormData({...formData, scheme: e.target.value})} className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none font-medium">
-                            <option>Housing Scheme Eligibility</option>
-                            <option>Income Certificate Issuance</option>
-                            <option>Ration Subsidy Request</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Applicant Full Name</label>
-                          <input type="text" placeholder="E.g. Ramesh Kumar" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Secure Govt ID</label>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input type="text" disabled value="[Aadhaar Redacted]" className="w-full pl-10 p-3.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-mono text-sm cursor-not-allowed" />
-                          </div>
-                          <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><Shield className="w-3 h-3"/> Edge-masked for strict privacy compliance.</p>
-                        </div>
-                        <button onClick={() => setStep(2)} className="w-full bg-[#0f172a] hover:bg-blue-900 text-white py-4 rounded-xl font-medium mt-4 transition-colors shadow-md flex items-center justify-center gap-2">
-                          Proceed to Consent <ChevronRight className="w-4 h-4"/>
-                        </button>
-                      </div>
+                <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
+                  <h1 className="text-3xl font-bold tracking-wide">National Portal of India</h1>
+                  <p className="text-blue-200 font-medium text-sm uppercase tracking-widest">Where Government Information Converges</p>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search for Services, Schemes, or Keywords..." 
+                        className="w-full pl-12 pr-4 py-4 rounded-xl text-slate-900 outline-none text-lg shadow-lg focus:ring-4 focus:ring-blue-500/50"
+                      />
                     </div>
-                  )}
+                    <button className="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-xl font-bold text-white shadow-lg transition-colors">
+                      Search
+                    </button>
+                  </div>
+                  
+                  <div className="flex flex-wrap justify-center items-center gap-3 pt-4 text-sm text-blue-200">
+                    <span className="font-semibold text-white">Trending Searches:</span>
+                    {REAL_SERVICES.slice(0, 5).map(service => (
+                      <button 
+                        key={service} 
+                        onClick={() => triggerServiceWorkflow(service)}
+                        className="hover:text-white underline underline-offset-4 decoration-blue-500/50 hover:decoration-white transition-colors"
+                      >
+                        {service}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-                  {/* STEP 2: Consent */}
-                  {step === 2 && (
-                    <div className="max-w-xl mx-auto space-y-6 animate-in slide-in-from-right-8 duration-500">
-                       <div className="text-center mb-8">
-                        <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4"><Shield className="w-6 h-6" /></div>
-                        <h3 className="text-2xl font-bold text-slate-900">Digital Authorization</h3>
-                        <p className="text-sm text-slate-500 mt-2">Data Protection & Interoperability Gate</p>
+              {/* Dynamic Workflow Area */}
+              <div className="max-w-4xl mx-auto p-4 md:p-8" ref={workflowRef}>
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4">
+                  
+                  {/* Progress Stepper */}
+                  <div className="bg-slate-50 border-b border-slate-200 px-2 py-3 flex overflow-x-auto scrollbar-hide">
+                    {["Request", "Consent", "Agent Swarm", "Data Ledger", "Result"].map((lbl, i) => (
+                      <div key={lbl} className={`flex-1 min-w-[120px] text-center px-2 py-2 border-b-2 transition-all duration-300 ${step >= i + 1 ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400"}`}>
+                        <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${step >= i + 1 ? "text-blue-600" : "text-slate-400"}`}>Step 0{i + 1}</div>
+                        <div className="text-sm font-medium">{lbl}</div>
                       </div>
+                    ))}
+                  </div>
 
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-slate-700 leading-relaxed shadow-inner">
-                        <p className="font-bold text-slate-900 mb-3 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Automated Data Fetching Notice:</p>
-                        <p>To process your <strong className="text-blue-700">{formData.scheme}</strong> request instantly, Sarkar Seva AI Agents will execute secure API queries across the following departments:</p>
-                        <ul className="list-disc pl-5 mt-3 space-y-1 font-medium text-slate-600">
-                          <li>State Revenue Department (Income Check)</li>
-                          <li>Land Records Registry (Property Check)</li>
-                          <li>Central Identity Portal (Verification)</li>
-                        </ul>
-                      </div>
-
-                      <label className="flex items-start gap-4 p-4 border border-blue-200 bg-blue-50/50 rounded-xl cursor-pointer hover:bg-blue-50 transition-colors">
-                        <input type="checkbox" checked={formData.consent} onChange={e => setFormData({...formData, consent: e.target.checked})} className="mt-1 w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-600" />
-                        <span className="text-sm font-medium text-slate-800">I provide explicit digital consent authorizing the Sarkar Seva swarm to fetch and validate my departmental records for this transaction.</span>
-                      </label>
-
-                      <div className="flex gap-3 pt-4">
-                        <button onClick={() => setStep(1)} className="px-6 py-4 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">Back</button>
-                        <button disabled={!formData.consent} onClick={runPipeline} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-medium transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2">
-                          Authorize & Orchestrate Swarm <Activity className="w-4 h-4"/>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* STEP 3: Swarm Execution */}
-                  {step === 3 && (
-                    <div className="max-w-2xl mx-auto text-center space-y-10 animate-in fade-in duration-500 py-8">
-                      <div>
-                        <h3 className="text-2xl font-bold text-slate-900">Swarm Orchestration</h3>
-                        <p className="text-sm text-slate-500 mt-2">LangGraph agents are processing your application in real-time.</p>
-                      </div>
-
-                      <div className="relative">
-                        <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto relative z-10 border-4 border-white shadow-xl">
-                          <Network className="w-10 h-10 text-blue-600 animate-pulse" />
+                  <div className="p-6 md:p-10 min-h-[450px]">
+                    {/* STEP 1: Details */}
+                    {step === 1 && (
+                      <div className="max-w-xl mx-auto space-y-6 animate-in fade-in duration-500">
+                        <div className="text-center mb-8">
+                          <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-4"><FileText className="w-6 h-6" /></div>
+                          <h3 className="text-2xl font-bold text-slate-900">Application Details</h3>
+                          <p className="text-sm text-slate-500 mt-2">Confirm your service. Our AI agents will handle the verification.</p>
                         </div>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-400/20 rounded-full animate-ping"></div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-4 py-1.5 rounded-full mb-4 border border-blue-200">
-                          Executing: {activeAgent}
-                        </div>
-                        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-200">
-                          <div className="bg-blue-600 h-full transition-all duration-300 ease-out relative" style={{width: `${pipelineProgress}%`}}>
-                            <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite]"></div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Target Scheme</label>
+                            <select value={formData.scheme} onChange={e => setFormData({...formData, scheme: e.target.value})} className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900">
+                              {REAL_SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                           </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Applicant Full Name</label>
+                            <input type="text" placeholder="E.g. Ramesh Kumar" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Secure Govt ID</label>
+                            <div className="relative">
+                              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <input type="text" disabled value="[Aadhaar Redacted]" className="w-full pl-10 p-3.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-mono text-sm cursor-not-allowed" />
+                            </div>
+                            <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><Shield className="w-3 h-3"/> Edge-masked for strict privacy compliance.</p>
+                          </div>
+                          <button onClick={() => setStep(2)} className="w-full bg-[#002147] hover:bg-blue-900 text-white py-4 rounded-xl font-medium mt-4 transition-colors shadow-md flex items-center justify-center gap-2">
+                            Proceed to Consent <ChevronRight className="w-4 h-4"/>
+                          </button>
                         </div>
                       </div>
+                    )}
 
-                      <div className="grid grid-cols-2 gap-3 text-left">
-                        {["Request Agent", "Routing Agent", "Data Agent", "Validation Agent", "Security Agent", "Response Agent"].map((agent, idx) => (
-                          <div key={idx} className={`p-3 rounded-lg border text-xs font-mono transition-all duration-500 ${pipelineProgress > (idx/6)*100 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
-                            <div className="flex justify-between items-center">
-                              <span>{idx+1}. {agent}</span>
-                              {pipelineProgress > (idx/6)*100 && <Check className="w-3 h-3 text-emerald-500"/>}
+                    {/* STEP 2: Consent */}
+                    {step === 2 && (
+                      <div className="max-w-xl mx-auto space-y-6 animate-in slide-in-from-right-8 duration-500">
+                         <div className="text-center mb-8">
+                          <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4"><Shield className="w-6 h-6" /></div>
+                          <h3 className="text-2xl font-bold text-slate-900">Digital Authorization</h3>
+                          <p className="text-sm text-slate-500 mt-2">Data Protection & Interoperability Gate</p>
+                        </div>
+
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-slate-700 leading-relaxed shadow-inner">
+                          <p className="font-bold text-slate-900 mb-3 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Automated Data Fetching Notice:</p>
+                          <p>To process your <strong className="text-blue-700">{formData.scheme}</strong> request instantly, Sarkar Seva AI Agents will execute secure API queries across the following departments:</p>
+                          <ul className="list-disc pl-5 mt-3 space-y-1 font-medium text-slate-600">
+                            <li>State Revenue Department (Income Check)</li>
+                            <li>Land Records Registry (Property Check)</li>
+                            <li>Central Identity Portal (Verification)</li>
+                          </ul>
+                        </div>
+
+                        <label className="flex items-start gap-4 p-4 border border-blue-200 bg-blue-50/50 rounded-xl cursor-pointer hover:bg-blue-50 transition-colors">
+                          <input type="checkbox" checked={formData.consent} onChange={e => setFormData({...formData, consent: e.target.checked})} className="mt-1 w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-600" />
+                          <span className="text-sm font-medium text-slate-800">I provide explicit digital consent authorizing the Sarkar Seva swarm to fetch and validate my departmental records for this transaction.</span>
+                        </label>
+
+                        <div className="flex gap-3 pt-4">
+                          <button onClick={() => setStep(1)} className="px-6 py-4 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">Back</button>
+                          <button disabled={!formData.consent} onClick={runPipeline} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-medium transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2">
+                            Authorize & Orchestrate Swarm <Activity className="w-4 h-4"/>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3: Swarm Execution */}
+                    {step === 3 && (
+                      <div className="max-w-2xl mx-auto text-center space-y-10 animate-in fade-in duration-500 py-8">
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900">Swarm Orchestration</h3>
+                          <p className="text-sm text-slate-500 mt-2">LangGraph agents are processing your application in real-time.</p>
+                        </div>
+
+                        <div className="relative">
+                          <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto relative z-10 border-4 border-white shadow-xl">
+                            <Network className="w-10 h-10 text-blue-600 animate-pulse" />
+                          </div>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-400/20 rounded-full animate-ping"></div>
+                        </div>
+
+                        <div>
+                          <div className="text-sm font-bold text-blue-700 bg-blue-50 inline-block px-4 py-1.5 rounded-full mb-4 border border-blue-200">
+                            Executing: {activeAgent}
+                          </div>
+                          <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-200">
+                            <div className="bg-blue-600 h-full transition-all duration-300 ease-out relative" style={{width: `${pipelineProgress}%`}}>
+                              <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1s_infinite]"></div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        </div>
 
-                  {/* STEP 4: Ledger/JSON */}
-                  {step === 4 && (
-                    <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-8 duration-500">
-                      <div className="flex items-center gap-3 mb-6">
-                        <Server className="w-8 h-8 text-slate-700" />
-                        <div>
-                          <h3 className="text-xl font-bold text-slate-900">Interoperability Ledger</h3>
-                          <p className="text-xs text-slate-500">Raw API Payload from Departmental Data Fetch</p>
+                        <div className="grid grid-cols-2 gap-3 text-left">
+                          {["Request Agent", "Routing Agent", "Data Agent", "Validation Agent", "Security Agent", "Response Agent"].map((agent, idx) => (
+                            <div key={idx} className={`p-3 rounded-lg border text-xs font-mono transition-all duration-500 ${pipelineProgress > (idx/6)*100 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
+                              <div className="flex justify-between items-center">
+                                <span>{idx+1}. {agent}</span>
+                                {pipelineProgress > (idx/6)*100 && <Check className="w-3 h-3 text-emerald-500"/>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
+                    )}
 
-                      <div className="bg-[#1e1e1e] rounded-xl overflow-hidden shadow-2xl border border-slate-800">
-                        <div className="bg-[#2d2d2d] px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                          <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                          <span className="text-xs font-mono text-slate-400 ml-2">payload_response.json</span>
+                    {/* STEP 4: Ledger/JSON */}
+                    {step === 4 && (
+                      <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-8 duration-500">
+                        <div className="flex items-center gap-3 mb-6">
+                          <Server className="w-8 h-8 text-slate-700" />
+                          <div>
+                            <h3 className="text-xl font-bold text-slate-900">Interoperability Ledger</h3>
+                            <p className="text-xs text-slate-500">Raw API Payload from Departmental Data Fetch</p>
+                          </div>
                         </div>
-                        <pre className="p-6 text-[13px] font-mono text-emerald-400 overflow-x-auto">
+
+                        <div className="bg-[#1e1e1e] rounded-xl overflow-hidden shadow-2xl border border-slate-800">
+                          <div className="bg-[#2d2d2d] px-4 py-2 flex items-center gap-2 border-b border-slate-700">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span className="text-xs font-mono text-slate-400 ml-2">payload_response.json</span>
+                          </div>
+                          <pre className="p-6 text-[13px] font-mono text-emerald-400 overflow-x-auto">
 {`{
   "transaction_id": "${txId}",
   "timestamp": "${new Date().toISOString()}",
-  "workflow": "Housing_Scheme_Eligibility",
+  "workflow": "${formData.scheme.replace(/\s+/g, '_')}",
   "departments_queried": ["Revenue", "Identity"],
   "response": {
     "identity_verification": { 
@@ -467,51 +576,52 @@ export default function SarkarSevaApp() {
     "encryption": "AES-256"
   }
 }`}
-                        </pre>
+                          </pre>
+                        </div>
+                        <button onClick={() => setStep(5)} className="w-full bg-[#002147] hover:bg-blue-900 text-white py-4 rounded-xl font-medium transition-colors shadow-md flex justify-center items-center gap-2">
+                          Generate Final Decision Certificate <FileText className="w-4 h-4"/>
+                        </button>
                       </div>
-                      <button onClick={() => setStep(5)} className="w-full bg-[#0f172a] hover:bg-blue-900 text-white py-4 rounded-xl font-medium transition-colors shadow-md flex justify-center items-center gap-2">
-                        Generate Final Decision Certificate <FileText className="w-4 h-4"/>
-                      </button>
-                    </div>
-                  )}
+                    )}
 
-                  {/* STEP 5: Success */}
-                  {step === 5 && (
-                    <div className="max-w-md mx-auto text-center space-y-6 animate-in zoom-in-95 duration-500 py-8">
-                      <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner border-4 border-white">
-                        <CheckCircle2 className="w-12 h-12" />
+                    {/* STEP 5: Success */}
+                    {step === 5 && (
+                      <div className="max-w-md mx-auto text-center space-y-6 animate-in zoom-in-95 duration-500 py-8">
+                        <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner border-4 border-white">
+                          <CheckCircle2 className="w-12 h-12" />
+                        </div>
+                        
+                        <div>
+                          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Approved</h2>
+                          <p className="text-slate-500 mt-2">Your application passed AI verification successfully.</p>
+                        </div>
+                        
+                        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-left space-y-4 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -z-10"></div>
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Application ID</span>
+                            <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded">{txId}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Service</span>
+                            <span className="font-semibold text-slate-800">{formData.scheme}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Applicant</span>
+                            <span className="font-semibold text-slate-800">{formData.name || "Citizen"}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-1">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Final Status</span>
+                            <span className="text-emerald-700 font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Verified</span>
+                          </div>
+                        </div>
+                        
+                        <button onClick={() => { setStep(1); setFormData({name: "", dob: "", scheme: "Ayushman Bharat Card", consent: false}); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-medium transition-colors border border-slate-300">
+                          Start New Application
+                        </button>
                       </div>
-                      
-                      <div>
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Approved</h2>
-                        <p className="text-slate-500 mt-2">Your application passed AI verification successfully.</p>
-                      </div>
-                      
-                      <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm text-left space-y-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-50 rounded-bl-full -z-10"></div>
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Application ID</span>
-                          <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded">{txId}</span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Service</span>
-                          <span className="font-semibold text-slate-800">{formData.scheme}</span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Applicant</span>
-                          <span className="font-semibold text-slate-800">{formData.name || "Citizen"}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-1">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Final Status</span>
-                          <span className="text-emerald-700 font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Verified</span>
-                        </div>
-                      </div>
-                      
-                      <button onClick={() => { setStep(1); setFormData({name: "", dob: "", scheme: "Housing Scheme Eligibility", consent: false}); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-medium transition-colors border border-slate-300">
-                        Start New Application
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -522,7 +632,7 @@ export default function SarkarSevaApp() {
               VIEW 2: ADMIN DASHBOARD
               ========================================== */}
           {currentView === "admin" && (
-            <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in">
+            <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
                 <div>
                   <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Department Oversight</h1>
@@ -553,7 +663,7 @@ export default function SarkarSevaApp() {
                         <tr className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 font-mono font-medium text-slate-700">TXN-IND-88421</td>
                           <td className="px-6 py-4 font-semibold text-slate-900">Verified Citizen</td>
-                          <td className="px-6 py-4 text-slate-600">Housing Scheme</td>
+                          <td className="px-6 py-4 text-slate-600">Ayushman Card</td>
                           <td className="px-6 py-4">
                             <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3"/> Cleared
@@ -607,7 +717,7 @@ export default function SarkarSevaApp() {
                     </div>
                     
                     <div className="flex gap-3 pt-6 mt-6 border-t border-slate-100">
-                      <button className="flex-1 bg-[#0f172a] text-white py-3 rounded-xl font-medium text-sm hover:bg-blue-900 transition shadow-sm">Approve Override</button>
+                      <button className="flex-1 bg-[#002147] text-white py-3 rounded-xl font-medium text-sm hover:bg-blue-900 transition shadow-sm">Approve Override</button>
                       <button className="flex-1 bg-white border border-slate-300 text-slate-700 py-3 rounded-xl font-medium text-sm hover:bg-slate-50 transition">Reject Request</button>
                     </div>
                   </div>
@@ -621,63 +731,92 @@ export default function SarkarSevaApp() {
               VIEW 3: CHATBOT (SARKAR MITRA)
               ========================================== */}
           {currentView === "chat" && (
-            <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[70vh] min-h-[500px] overflow-hidden animate-in fade-in">
-              {/* Chat Header */}
-              <div className="bg-[#0f172a] p-4 flex justify-between items-center shrink-0 text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border-2 border-blue-400/30 shadow-lg">
-                    <MessageSquare className="w-5 h-5 text-white" />
+            <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[75vh] min-h-[500px] overflow-hidden">
+                {/* Chat Header */}
+                <div className="bg-[#002147] p-4 flex justify-between items-center shrink-0 text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border-2 border-blue-400/30 shadow-lg">
+                      <MessageSquare className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold tracking-wide">Sarkar Mitra AI</h2>
+                      <p className="text-[10px] text-blue-200 uppercase tracking-widest font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> Active Support Agent
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold tracking-wide">Sarkar Mitra AI</h2>
-                    <p className="text-[10px] text-blue-200 uppercase tracking-widest font-mono flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> Active Support Agent
-                    </p>
+                  
+                  {/* Language Selector */}
+                  <div className="flex items-center gap-2 bg-blue-900/50 px-3 py-1.5 rounded-lg border border-blue-800/50">
+                    <Globe className="w-4 h-4 text-blue-200" />
+                    <select 
+                      value={chatLanguage} 
+                      onChange={(e) => setChatLanguage(e.target.value)}
+                      className="bg-transparent text-sm font-medium text-white outline-none cursor-pointer appearance-none pr-4"
+                    >
+                      <option className="text-black">English</option>
+                      <option className="text-black">Hindi</option>
+                      <option className="text-black">Marathi</option>
+                      <option className="text-black">Kannada</option>
+                    </select>
                   </div>
                 </div>
-              </div>
-              
-              {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
-                {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                      msg.role === "user" 
-                        ? "bg-blue-600 text-white rounded-br-none" 
-                        : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
-                    }`}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
                 
-                {chatLoading && (
-                  <div className="flex justify-start animate-in fade-in">
-                    <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-2 items-center">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                      <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                        msg.role === "user" 
+                          ? "bg-blue-600 text-white rounded-br-none" 
+                          : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
+                      }`}>
+                        {msg.text}
+                      </div>
                     </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-              
-              {/* Input Area */}
-              <div className="p-4 bg-white border-t border-slate-200 shrink-0">
-                <form onSubmit={handleSendMessage} className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={chatInput} 
-                    onChange={e => setChatInput(e.target.value)} 
-                    placeholder="Ask about scheme eligibility or track an application..." 
-                    className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white text-sm transition-all"
-                    disabled={chatLoading}
-                  />
-                  <button type="submit" disabled={!chatInput.trim() || chatLoading} className="bg-[#0f172a] hover:bg-blue-900 text-white px-5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center">
-                    <Send className="w-5 h-5" />
-                  </button>
-                </form>
+                  ))}
+                  
+                  {chatLoading && (
+                    <div className="flex justify-start animate-in fade-in">
+                      <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-2 items-center">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                
+                {/* Input Area */}
+                <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+                  <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
+                    
+                    <button type="button" onClick={simulateUpload} className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Upload Document">
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+
+                    <div className="relative flex-1">
+                      <input 
+                        type="text" 
+                        value={chatInput} 
+                        onChange={e => setChatInput(e.target.value)} 
+                        placeholder={isRecording ? "Listening..." : `Ask about scheme eligibility in ${chatLanguage}...`} 
+                        className={`w-full border rounded-xl px-4 py-3.5 outline-none text-sm transition-all ${isRecording ? "bg-red-50 border-red-200 text-red-900 placeholder-red-400" : "bg-slate-50 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white"}`}
+                        disabled={chatLoading || isRecording}
+                      />
+                    </div>
+
+                    <button type="button" onClick={simulateVoice} className={`p-3 rounded-xl transition-all shadow-sm border ${isRecording ? "bg-red-100 text-red-600 border-red-200 animate-pulse" : "bg-white text-slate-500 hover:text-blue-600 hover:bg-slate-50 border-slate-200"}`} title="Voice Input">
+                      <Mic className="w-5 h-5" />
+                    </button>
+
+                    <button type="submit" disabled={!chatInput.trim() || chatLoading} className="bg-[#002147] hover:bg-blue-900 text-white p-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center">
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
           )}
