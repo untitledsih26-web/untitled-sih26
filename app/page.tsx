@@ -6,7 +6,7 @@ import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
   Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
-  Paperclip, Mic, Building, Users
+  Paperclip, Mic, Building, Users, Clock, Filter
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
@@ -22,6 +22,17 @@ const REAL_SERVICES = [
   "Jeevan Pramaan (Life Certificate)",
   "Housing Scheme Eligibility",
   "Income Certificate Issuance"
+];
+
+// Mock data for the Department Dashboard
+const MOCK_REQUESTS = [
+  { id: "TXN-IND-88421", name: "Ramesh Kumar", service: "Ayushman Bharat Card", status: "Cleared", date: "2023-10-24" },
+  { id: "TXN-IND-11234", name: "John Doe", service: "Income Certificate Issuance", status: "Anomaly", date: "2023-10-24" },
+  { id: "TXN-IND-99321", name: "Priya Sharma", service: "PAN Card Services", status: "Pending AI", date: "2023-10-25" },
+  { id: "TXN-IND-77210", name: "Anita Desai", service: "Housing Scheme Eligibility", status: "Cleared", date: "2023-10-25" },
+  { id: "TXN-IND-55432", name: "Vikram Singh", service: "Senior Citizen Registration", status: "Manual Review", date: "2023-10-26" },
+  { id: "TXN-IND-33211", name: "Rahul Verma", service: "Ayushman Bharat Card", status: "Pending AI", date: "2023-10-26" },
+  { id: "TXN-IND-44110", name: "Sneha Patil", service: "Income Certificate Issuance", status: "Cleared", date: "2023-10-27" }
 ];
 
 const TRANSLATIONS: any = {
@@ -123,6 +134,9 @@ export default function SarkarSevaApp() {
   const workflowRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Admin Dashboard State
+  const [selectedAdminFilter, setSelectedAdminFilter] = useState<string>("All Services");
+
   // Chat State
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -181,7 +195,7 @@ export default function SarkarSevaApp() {
       } as any);
       if (error) throw error;
       
-      // Persist role correctly to fix the department routing bug
+      // Save role and route to the correct distinct page
       localStorage.setItem("sarkarRole", loginTab);
       setUserRole(loginTab);
       setCurrentView(loginTab === "official" ? "admin" : "services");
@@ -270,6 +284,22 @@ export default function SarkarSevaApp() {
   };
 
   const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+  
+  // Filter for Admin Dashboard
+  const filteredAdminRequests = selectedAdminFilter === "All Services" 
+    ? MOCK_REQUESTS 
+    : MOCK_REQUESTS.filter(req => req.service === selectedAdminFilter);
+
+  // Status Badge Helper
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "Cleared": return <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> {status}</span>;
+      case "Anomaly": return <span className="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3"/> {status}</span>;
+      case "Pending AI": return <span className="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1"><Activity className="w-3 h-3"/> {status}</span>;
+      case "Manual Review": return <span className="bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1"><Clock className="w-3 h-3"/> {status}</span>;
+      default: return <span>{status}</span>;
+    }
+  };
 
   if (!session) {
     return (
@@ -403,16 +433,19 @@ export default function SarkarSevaApp() {
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-2">
+          {/* CITIZEN NAV */}
           {userRole === "citizen" && (
             <button onClick={() => setCurrentView("services")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "services" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "hover:bg-white/5 hover:text-white"}`}>
               <FileText className="w-5 h-5" /> <span className="font-medium text-sm">{t.citizenServices}</span>
             </button>
           )}
+          {/* OFFICIAL NAV */}
           {userRole === "official" && (
             <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-white/5 hover:text-white"}`}>
               <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">{t.deptDashboard}</span>
             </button>
           )}
+          {/* SHARED NAV */}
           <button onClick={() => setCurrentView("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "chat" ? "bg-purple-600/20 text-purple-400 border border-purple-500/30" : "hover:bg-white/5 hover:text-white"}`}>
             <MessageSquare className="w-5 h-5" /> <span className="font-medium text-sm">{t.aiMitra}</span>
           </button>
@@ -452,6 +485,10 @@ export default function SarkarSevaApp() {
         </header>
 
         <div className="flex-1 overflow-y-auto bg-slate-100">
+          
+          {/* ======================= */}
+          {/* VIEW 1: CITIZEN PORTAL */}
+          {/* ======================= */}
           {currentView === "services" && (
             <div>
               <div className="bg-[#002147] text-white py-12 px-6 shadow-md relative overflow-hidden">
@@ -693,53 +730,103 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
+
+          {/* ======================= */}
+          {/* VIEW 2: DEPT DASHBOARD  */}
+          {/* ======================= */}
           {currentView === "admin" && (
             <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in">
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDashboard}</h1>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-                  <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-                    <h2 className="font-bold text-slate-800 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Live Transaction Queue</h2>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDashboard}</h1>
+                
+                {/* ADMIN DROPDOWN FILTER */}
+                <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
+                  <Filter className="w-5 h-5 text-slate-400" />
+                  <select 
+                    value={selectedAdminFilter} 
+                    onChange={(e) => setSelectedAdminFilter(e.target.value)}
+                    className="bg-transparent text-sm font-semibold text-slate-800 outline-none cursor-pointer w-full md:w-64"
+                  >
+                    <option value="All Services">View All Department Services</option>
+                    {REAL_SERVICES.map(service => (
+                      <option key={service} value={service}>{service}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* ADMIN STATS */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-slate-500 text-sm font-semibold mb-1">Total Requests</div>
+                  <div className="text-3xl font-black text-slate-900">{filteredAdminRequests.length}</div>
+                </div>
+                <div className="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-sm">
+                  <div className="text-emerald-700 text-sm font-semibold mb-1">Cleared by AI</div>
+                  <div className="text-3xl font-black text-emerald-800">{filteredAdminRequests.filter(r => r.status === "Cleared").length}</div>
+                </div>
+                <div className="bg-red-50 p-5 rounded-xl border border-red-100 shadow-sm">
+                  <div className="text-red-700 text-sm font-semibold mb-1">Anomalies Detected</div>
+                  <div className="text-3xl font-black text-red-800">{filteredAdminRequests.filter(r => r.status === "Anomaly").length}</div>
+                </div>
+                <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
+                  <div className="text-blue-700 text-sm font-semibold mb-1">Processing Swarm</div>
+                  <div className="text-3xl font-black text-blue-800">{filteredAdminRequests.filter(r => r.status === "Pending AI" || r.status === "Manual Review").length}</div>
+                </div>
+              </div>
+
+              {/* ADMIN TABLE */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                  <h2 className="font-bold text-slate-800 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Live Transaction Queue</h2>
+                  <div className="text-xs font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-full uppercase tracking-widest">
+                    {selectedAdminFilter}
                   </div>
-                  <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                      <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200 font-bold">
+                </div>
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200 font-bold">
+                      <tr>
+                        <th className="px-6 py-4">Transaction ID</th>
+                        <th className="px-6 py-4">Applicant</th>
+                        <th className="px-6 py-4">Service Type</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Agent Status</th>
+                        <th className="px-6 py-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredAdminRequests.length === 0 ? (
                         <tr>
-                          <th className="px-6 py-4">Transaction ID</th>
-                          <th className="px-6 py-4">Applicant</th>
-                          <th className="px-6 py-4">Service Type</th>
-                          <th className="px-6 py-4">Agent Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <tr className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-mono font-medium text-slate-700">TXN-IND-88421</td>
-                          <td className="px-6 py-4 font-semibold text-slate-900">Verified Citizen</td>
-                          <td className="px-6 py-4 text-slate-600">Ayushman Card</td>
-                          <td className="px-6 py-4">
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3"/> Cleared
-                            </span>
+                          <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">
+                            No requests found for {selectedAdminFilter}.
                           </td>
                         </tr>
-                        <tr className="bg-red-50/30 hover:bg-red-50/50 transition-colors border-l-4 border-l-red-500">
-                          <td className="px-6 py-4 font-mono font-medium text-slate-700">TXN-IND-11234</td>
-                          <td className="px-6 py-4 font-semibold text-slate-900">John Doe</td>
-                          <td className="px-6 py-4 text-slate-600">Income Cert</td>
-                          <td className="px-6 py-4">
-                            <span className="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3"/> Anomaly
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                      ) : (
+                        filteredAdminRequests.map((req, idx) => (
+                          <tr key={idx} className={`transition-colors ${req.status === "Anomaly" ? "bg-red-50/30 hover:bg-red-50/50 border-l-4 border-l-red-500" : "hover:bg-slate-50"}`}>
+                            <td className="px-6 py-4 font-mono font-medium text-slate-700">{req.id}</td>
+                            <td className="px-6 py-4 font-semibold text-slate-900">{req.name}</td>
+                            <td className="px-6 py-4 text-slate-600">{req.service}</td>
+                            <td className="px-6 py-4 text-slate-500">{req.date}</td>
+                            <td className="px-6 py-4">{getStatusBadge(req.status)}</td>
+                            <td className="px-6 py-4 text-right">
+                              <button className="text-blue-600 hover:text-blue-800 font-bold text-xs underline underline-offset-2">View File</button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           )}
 
+
+          {/* ======================= */}
+          {/* VIEW 3: AI MITRA CHAT   */}
+          {/* ======================= */}
           {currentView === "chat" && (
             <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[75vh] min-h-[500px] overflow-hidden">
