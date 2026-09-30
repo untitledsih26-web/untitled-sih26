@@ -6,7 +6,7 @@ import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
   Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
-  Paperclip, Mic, Building, Users, Clock, Filter
+  Paperclip, Mic, Building, Users, Clock, Filter, RefreshCw
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
@@ -123,6 +123,10 @@ export default function SarkarSevaApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
+  // CAPTCHA State
+  const [captchaCode, setCaptchaCode] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
+
   // Workflow State
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -144,7 +148,19 @@ export default function SarkarSevaApp() {
   const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Generate a secure verification CAPTCHA
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous characters (O, 0, I, 1)
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput("");
+  };
+
   useEffect(() => {
+    generateCaptcha();
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -170,7 +186,16 @@ export default function SarkarSevaApp() {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthLoading(true); setAuthError("");
+    setAuthError("");
+
+    // Verify CAPTCHA
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setAuthError("Incorrect CAPTCHA verification code. Please try again.");
+      generateCaptcha();
+      return;
+    }
+
+    setAuthLoading(true);
     try {
       const { error } = authMode === "email"
         ? await supabase.auth.signInWithOtp({ email: contact })
@@ -179,6 +204,7 @@ export default function SarkarSevaApp() {
       setOtpSent(true);
     } catch (err: any) {
       setAuthError(err.message);
+      generateCaptcha();
     } finally {
       setAuthLoading(false);
     }
@@ -195,7 +221,6 @@ export default function SarkarSevaApp() {
       } as any);
       if (error) throw error;
       
-      // Save role and route to the correct distinct page
       localStorage.setItem("sarkarRole", loginTab);
       setUserRole(loginTab);
       setCurrentView(loginTab === "official" ? "admin" : "services");
@@ -285,12 +310,10 @@ export default function SarkarSevaApp() {
 
   const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
   
-  // Filter for Admin Dashboard
   const filteredAdminRequests = selectedAdminFilter === "All Services" 
     ? MOCK_REQUESTS 
     : MOCK_REQUESTS.filter(req => req.service === selectedAdminFilter);
 
-  // Status Badge Helper
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Cleared": return <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> {status}</span>;
@@ -331,7 +354,7 @@ export default function SarkarSevaApp() {
           </div>
         </div>
 
-        <div className="w-full lg:w-1/2 flex flex-col p-8 bg-white relative">
+        <div className="w-full lg:w-1/2 flex flex-col p-8 bg-white relative overflow-y-auto">
           <div className="absolute top-4 right-8 z-50">
             <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
               <Globe className="w-4 h-4 text-slate-500" />
@@ -344,18 +367,18 @@ export default function SarkarSevaApp() {
             </div>
           </div>
 
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-full max-w-md space-y-8">
-              <div className="text-center lg:text-left mb-6">
+          <div className="flex-1 flex items-center justify-center py-8">
+            <div className="w-full max-w-md space-y-6">
+              <div className="text-center lg:text-left mb-4">
                 <h2 className="text-3xl font-bold text-slate-900">{t.portalAccess}</h2>
                 <p className="text-sm text-slate-500 mt-2">Select your portal and authenticate via secure OTP.</p>
               </div>
 
-              <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+              <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
+                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Users className="w-4 h-4"/> {t.citizenPortal}
                 </button>
-                <button onClick={() => { setLoginTab("official"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Building className="w-4 h-4"/> {t.deptOfficial}
                 </button>
               </div>
@@ -367,9 +390,9 @@ export default function SarkarSevaApp() {
               )}
 
               {!otpSent ? (
-                <form onSubmit={handleSendOtp} className="space-y-5">
+                <form onSubmit={handleSendOtp} className="space-y-4">
                   {loginTab === "citizen" && (
-                    <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200 mb-4">
+                    <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200 mb-2">
                       <button type="button" onClick={() => setAuthMode("email")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "email" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Email OTP</button>
                       <button type="button" onClick={() => setAuthMode("phone")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "phone" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Mobile OTP</button>
                     </div>
@@ -385,11 +408,39 @@ export default function SarkarSevaApp() {
                         type={authMode === "email" || loginTab === "official" ? "email" : "tel"} 
                         required placeholder={loginTab === "official" ? "officer@maharashtra.gov.in" : authMode === "email" ? "citizen@example.com" : "+91..."} 
                         value={contact} onChange={e => setContact(e.target.value)} 
-                        className="w-full pl-10 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
                       />
                     </div>
                   </div>
-                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
+
+                  {/* CAPTCHA SECTION */}
+                  <div className="space-y-2 pt-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Security Verification</label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 select-none font-mono text-xl font-extrabold tracking-[0.3em] text-slate-800 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center shadow-inner relative overflow-hidden">
+                        <span className="line-through decoration-blue-600/70 decoration-2 italic">{captchaCode}</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={generateCaptcha} 
+                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-all flex items-center justify-center"
+                        title="Refresh CAPTCHA"
+                      >
+                        <RefreshCw className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <input 
+                      type="text" 
+                      required 
+                      maxLength={5}
+                      placeholder="Enter the 5 characters above" 
+                      value={captchaInput} 
+                      onChange={e => setCaptchaInput(e.target.value)} 
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono uppercase tracking-widest focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                    />
+                  </div>
+
+                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-2 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
                   </button>
                 </form>
@@ -433,19 +484,16 @@ export default function SarkarSevaApp() {
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {/* CITIZEN NAV */}
           {userRole === "citizen" && (
             <button onClick={() => setCurrentView("services")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "services" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "hover:bg-white/5 hover:text-white"}`}>
               <FileText className="w-5 h-5" /> <span className="font-medium text-sm">{t.citizenServices}</span>
             </button>
           )}
-          {/* OFFICIAL NAV */}
           {userRole === "official" && (
             <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-white/5 hover:text-white"}`}>
               <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">{t.deptDashboard}</span>
             </button>
           )}
-          {/* SHARED NAV */}
           <button onClick={() => setCurrentView("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "chat" ? "bg-purple-600/20 text-purple-400 border border-purple-500/30" : "hover:bg-white/5 hover:text-white"}`}>
             <MessageSquare className="w-5 h-5" /> <span className="font-medium text-sm">{t.aiMitra}</span>
           </button>
@@ -486,9 +534,7 @@ export default function SarkarSevaApp() {
 
         <div className="flex-1 overflow-y-auto bg-slate-100">
           
-          {/* ======================= */}
           {/* VIEW 1: CITIZEN PORTAL */}
-          {/* ======================= */}
           {currentView === "services" && (
             <div>
               <div className="bg-[#002147] text-white py-12 px-6 shadow-md relative overflow-hidden">
@@ -730,16 +776,12 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
-
-          {/* ======================= */}
           {/* VIEW 2: DEPT DASHBOARD  */}
-          {/* ======================= */}
           {currentView === "admin" && (
             <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDashboard}</h1>
                 
-                {/* ADMIN DROPDOWN FILTER */}
                 <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
                   <Filter className="w-5 h-5 text-slate-400" />
                   <select 
@@ -755,7 +797,6 @@ export default function SarkarSevaApp() {
                 </div>
               </div>
 
-              {/* ADMIN STATS */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                   <div className="text-slate-500 text-sm font-semibold mb-1">Total Requests</div>
@@ -775,7 +816,6 @@ export default function SarkarSevaApp() {
                 </div>
               </div>
 
-              {/* ADMIN TABLE */}
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                 <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                   <h2 className="font-bold text-slate-800 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Live Transaction Queue</h2>
@@ -823,10 +863,7 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
-
-          {/* ======================= */}
           {/* VIEW 3: AI MITRA CHAT   */}
-          {/* ======================= */}
           {currentView === "chat" && (
             <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[75vh] min-h-[500px] overflow-hidden">
