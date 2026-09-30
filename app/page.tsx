@@ -14,7 +14,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydw
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Real Gov Services based on National Portal
 const REAL_SERVICES = [
   "Senior Citizen Registration",
   "Online Marriage Registration",
@@ -25,11 +24,84 @@ const REAL_SERVICES = [
   "Income Certificate Issuance"
 ];
 
+const TRANSLATIONS: any = {
+  English: {
+    portalAccess: "Official Portal Access",
+    citizenPortal: "Citizen Portal",
+    deptOfficial: "Dept Official",
+    citizenServices: "Citizen Services",
+    deptDashboard: "Department Oversight",
+    aiMitra: "Sarkar Mitra AI",
+    searchPlaceholder: "Search for Services, Schemes, or Keywords...",
+    trending: "Trending Searches:",
+    selectScheme: "Target Scheme",
+    applicantName: "Applicant Full Name",
+    proceedConsent: "Proceed to Consent",
+    signOut: "Sign Out",
+    welcome: "Namaste. I am Sarkar Mitra, your AI guide. How can I assist you with government services today?",
+    askEligibility: "Ask about scheme eligibility...",
+    nationalPortal: "National Portal of India"
+  },
+  Hindi: {
+    portalAccess: "आधिकारिक पोर्टल एक्सेस",
+    citizenPortal: "नागरिक पोर्टल",
+    deptOfficial: "विभागीय अधिकारी",
+    citizenServices: "नागरिक सेवाएं",
+    deptDashboard: "विभाग अवलोकन",
+    aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "सेवाओं, योजनाओं या कीवर्ड खोजें...",
+    trending: "ट्रेंडिंग खोजें:",
+    selectScheme: "लक्षित योजना",
+    applicantName: "आवेदक का पूरा नाम",
+    proceedConsent: "सहमति के लिए आगे बढ़ें",
+    signOut: "साइन आउट",
+    welcome: "नमस्ते। मैं सरकार मित्र हूँ, आपका AI मार्गदर्शक। मैं आज सरकारी सेवाओं में आपकी कैसे मदद कर सकता हूँ?",
+    askEligibility: "योजना पात्रता के बारे में पूछें...",
+    nationalPortal: "भारत का राष्ट्रीय पोर्टल"
+  },
+  Marathi: {
+    portalAccess: "अधिकृत पोर्टल प्रवेश",
+    citizenPortal: "नागरिक पोर्टल",
+    deptOfficial: "विभागीय अधिकारी",
+    citizenServices: "नागरिक सेवा",
+    deptDashboard: "विभाग देखरेख",
+    aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "सेवा, योजना किंवा कीवर्ड शोधा...",
+    trending: "ट्रेंडिंग शोध:",
+    selectScheme: "लक्ष्य योजना",
+    applicantName: "अर्जदाराचे पूर्ण नाव",
+    proceedConsent: "संमतीसाठी पुढे जा",
+    signOut: "साइन आउट",
+    welcome: "नमस्कार. मी सरकार मित्र आहे, तुमचा AI मार्गदर्शक. मी आज तुम्हाला सरकारी सेवांमध्ये कशी मदत करू शकतो?",
+    askEligibility: "योजना पात्रतेबद्दल विचारा...",
+    nationalPortal: "भारताचे राष्ट्रीय पोर्टल"
+  },
+  Kannada: {
+    portalAccess: "ಅಧಿಕೃತ ಪೋರ್ಟಲ್ ಪ್ರವೇಶ",
+    citizenPortal: "ನಾಗರಿಕ ಪೋರ್ಟಲ್",
+    deptOfficial: "ಇಲಾಖಾ ಅಧಿಕಾರಿ",
+    citizenServices: "ನಾಗರಿಕ ಸೇವೆಗಳು",
+    deptDashboard: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ",
+    aiMitra: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI",
+    searchPlaceholder: "ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್‌‌ಗಳನ್ನು ಹುಡುಕಿ...",
+    trending: "ಟ್ರೆಂಡಿಂಗ್ ಹುಡುಕಾಟಗಳು:",
+    selectScheme: "ಗುರಿ ಯೋಜನೆ",
+    applicantName: "ಅರ್ಜಿದಾರರ ಪೂರ್ಣ ಹೆಸರು",
+    proceedConsent: "ಸಮ್ಮತಿಗೆ ಮುಂದುವರಿಯಿರಿ",
+    signOut: "ಸೈನ್ ಔಟ್",
+    welcome: "ನಮಸ್ಕಾರ. ನಾನು ಸರ್ಕಾರ್ ಮಿತ್ರ, ನಿಮ್ಮ AI ಮಾರ್ಗದರ್ಶಿ. ಸರ್ಕಾರಿ ಸೇವೆಗಳೊಂದಿಗೆ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+    askEligibility: "ಯೋಜನೆಯ ಅರ್ಹತೆಯ ಬಗ್ಗೆ ಕೇಳಿ...",
+    nationalPortal: "ಭಾರತದ ರಾಷ್ಟ್ರೀಯ ಪೋರ್ಟಲ್"
+  }
+};
+
 export default function SarkarSevaApp() {
-  // --- STATE MANAGEMENT ---
   const [session, setSession] = useState<any>(null);
   const [currentView, setCurrentView] = useState("services");
   const [userRole, setUserRole] = useState<"citizen" | "official">("citizen");
+  const [globalLang, setGlobalLang] = useState("English");
+  
+  const t = TRANSLATIONS[globalLang];
 
   // Auth State
   const [loginTab, setLoginTab] = useState<"citizen" | "official">("citizen");
@@ -42,35 +114,46 @@ export default function SarkarSevaApp() {
 
   // Workflow State
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({ name: "", dob: "", scheme: "Ayushman Bharat Card", consent: false });
   const [pipelineProgress, setPipelineProgress] = useState(0);
   const [activeAgent, setActiveAgent] = useState("");
   const [txId, setTxId] = useState("");
   const workflowRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Chat State
-  const [chatLanguage, setChatLanguage] = useState("English");
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [messages, setMessages] = useState([
-    { role: "agent", text: "Namaste. I am Sarkar Mitra, your AI guide. How can I assist you with government services today?" }
-  ]);
+  const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // --- EFFECTS ---
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        const savedRole = (localStorage.getItem("sarkarRole") as "citizen" | "official") || "citizen";
+        setUserRole(savedRole);
+        setCurrentView(savedRole === "official" ? "admin" : "services");
+      }
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+    });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    setMessages([{ role: "agent", text: t.welcome }]);
+  }, [globalLang]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- AUTH HANDLERS ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true); setAuthError("");
@@ -97,6 +180,9 @@ export default function SarkarSevaApp() {
         type: authMode === "email" ? "email" : "sms"
       } as any);
       if (error) throw error;
+      
+      // Persist role correctly to fix the department routing bug
+      localStorage.setItem("sarkarRole", loginTab);
       setUserRole(loginTab);
       setCurrentView(loginTab === "official" ? "admin" : "services");
       setSession(data.session);
@@ -107,10 +193,11 @@ export default function SarkarSevaApp() {
     }
   };
 
-  // --- WORKFLOW SIMULATION ---
   const triggerServiceWorkflow = (serviceName: string) => {
     setFormData({ ...formData, scheme: serviceName });
     setStep(1);
+    setSearchQuery("");
+    setShowSuggestions(false);
     workflowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -138,7 +225,6 @@ export default function SarkarSevaApp() {
     }, 1500);
   };
 
-  // --- CHAT SIMULATION ---
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -149,7 +235,7 @@ export default function SarkarSevaApp() {
     setChatLoading(true);
 
     setTimeout(() => {
-      let reply = `I have securely checked the departmental knowledge base in ${chatLanguage}. Can you provide more details so I can route your request accurately?`;
+      let reply = `I have securely checked the departmental knowledge base. Can you provide more details so I can route your request accurately?`;
       if (userMsg.toLowerCase().includes("housing") || userMsg.toLowerCase().includes("scheme")) {
         reply = "For the Housing Scheme, our agents will cross-verify your Income Certificate and Land Records. You can start the application in the 'Citizen Services' tab.";
       } else if (userMsg.toLowerCase().includes("status")) {
@@ -160,9 +246,13 @@ export default function SarkarSevaApp() {
     }, 1800);
   };
 
-  const simulateUpload = () => {
-    setMessages(prev => [...prev, { role: "user", text: "[Document Uploaded: ID_Proof.pdf]" }]);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setMessages(prev => [...prev, { role: "user", text: `[Document Uploaded: ${file.name}]` }]);
     setChatLoading(true);
+    
     setTimeout(() => {
       setMessages(prev => [...prev, { role: "agent", text: "Document received and passed to the OCR Agent. Data has been securely extracted and masked." }]);
       setChatLoading(false);
@@ -179,15 +269,12 @@ export default function SarkarSevaApp() {
     }
   };
 
-  // ==========================================
-  // VIEW: UNAUTHENTICATED (LOGIN PORTAL)
-  // ==========================================
+  const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-50 flex font-sans">
-        {/* Left Side: Govt Branding */}
         <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#002147] text-white p-12 relative overflow-hidden">
-          {/* India Flag Gradient */}
           <div className="absolute top-0 left-0 w-full h-3 flex">
             <div className="h-full w-1/3 bg-[#FF9933]"></div>
             <div className="h-full w-1/3 bg-white"></div>
@@ -195,7 +282,9 @@ export default function SarkarSevaApp() {
           </div>
           
           <div className="relative z-10 flex flex-col items-start gap-4">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/Seal_of_Maharashtra.svg" alt="Govt Logo" className="w-20 h-20 bg-white rounded-full p-1" />
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-[#002147] shadow-xl">
+              <Landmark size={36} />
+            </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">SARKAR SEVA</h1>
               <p className="text-sm text-slate-300 font-mono tracking-widest uppercase">Government of Maharashtra</p>
@@ -212,92 +301,91 @@ export default function SarkarSevaApp() {
           </div>
         </div>
 
-        {/* Right Side: Dual Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative">
-          <div className="w-full max-w-md space-y-8">
-            <div className="text-center lg:text-left mb-6">
-              <h2 className="text-3xl font-bold text-slate-900">Official Portal Access</h2>
-              <p className="text-sm text-slate-500 mt-2">Select your portal and authenticate via secure OTP.</p>
+        <div className="w-full lg:w-1/2 flex flex-col p-8 bg-white relative">
+          <div className="absolute top-4 right-8 z-50">
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+              <Globe className="w-4 h-4 text-slate-500" />
+              <select value={globalLang} onChange={(e) => setGlobalLang(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer">
+                <option>English</option>
+                <option>Hindi</option>
+                <option>Marathi</option>
+                <option>Kannada</option>
+              </select>
             </div>
+          </div>
 
-            {/* Login Tabs */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-              <button 
-                onClick={() => { setLoginTab("citizen"); setOtpSent(false); }}
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                <Users className="w-4 h-4"/> Citizen Portal
-              </button>
-              <button 
-                onClick={() => { setLoginTab("official"); setOtpSent(false); }}
-                className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}
-              >
-                <Building className="w-4 h-4"/> Dept Official
-              </button>
-            </div>
-
-            {authError && (
-              <div className="p-4 bg-red-50 border-l-4 border-red-600 text-red-700 text-sm flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <span>{authError}</span>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-full max-w-md space-y-8">
+              <div className="text-center lg:text-left mb-6">
+                <h2 className="text-3xl font-bold text-slate-900">{t.portalAccess}</h2>
+                <p className="text-sm text-slate-500 mt-2">Select your portal and authenticate via secure OTP.</p>
               </div>
-            )}
 
-            {!otpSent ? (
-              <form onSubmit={handleSendOtp} className="space-y-5">
-                {loginTab === "citizen" && (
-                  <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200 mb-4">
-                    <button type="button" onClick={() => setAuthMode("email")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "email" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Email OTP</button>
-                    <button type="button" onClick={() => setAuthMode("phone")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "phone" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Mobile OTP</button>
-                  </div>
-                )}
-                
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    {loginTab === "official" ? "Official Govt Email (.gov.in)" : authMode === "email" ? "Registered Email" : "Registered Mobile (+91)"}
-                  </label>
-                  <div className="relative">
-                    <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input 
-                      type={authMode === "email" || loginTab === "official" ? "email" : "tel"} 
-                      required 
-                      placeholder={loginTab === "official" ? "officer@maharashtra.gov.in" : authMode === "email" ? "citizen@example.com" : "+91..."} 
-                      value={contact} 
-                      onChange={e => setContact(e.target.value)} 
-                      className="w-full pl-10 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
-                    />
-                  </div>
-                </div>
-                <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
-                  {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
+              <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                  <Users className="w-4 h-4"/> {t.citizenPortal}
                 </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 text-center">
-                  Secure code sent to <strong>{contact}</strong>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Enter 6-Digit Code</label>
-                  <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" />
-                </div>
-                <button disabled={authLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-medium flex justify-center transition-all disabled:opacity-70">
-                  {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Authenticate"}
+                <button onClick={() => { setLoginTab("official"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                  <Building className="w-4 h-4"/> {t.deptOfficial}
                 </button>
-              </form>
-            )}
+              </div>
+
+              {authError && (
+                <div className="p-4 bg-red-50 border-l-4 border-red-600 text-red-700 text-sm flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 shrink-0" /><span>{authError}</span>
+                </div>
+              )}
+
+              {!otpSent ? (
+                <form onSubmit={handleSendOtp} className="space-y-5">
+                  {loginTab === "citizen" && (
+                    <div className="bg-slate-50 p-1.5 rounded-xl flex text-sm font-medium border border-slate-200 mb-4">
+                      <button type="button" onClick={() => setAuthMode("email")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "email" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Email OTP</button>
+                      <button type="button" onClick={() => setAuthMode("phone")} className={`flex-1 py-2 rounded-lg transition-all ${authMode === "phone" ? "bg-white text-blue-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>Mobile OTP</button>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      {loginTab === "official" ? "Official Govt Email (.gov.in)" : authMode === "email" ? "Registered Email" : "Registered Mobile (+91)"}
+                    </label>
+                    <div className="relative">
+                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        type={authMode === "email" || loginTab === "official" ? "email" : "tel"} 
+                        required placeholder={loginTab === "official" ? "officer@maharashtra.gov.in" : authMode === "email" ? "citizen@example.com" : "+91..."} 
+                        value={contact} onChange={e => setContact(e.target.value)} 
+                        className="w-full pl-10 pr-4 py-3.5 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                      />
+                    </div>
+                  </div>
+                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
+                    {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-5">
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 text-center">
+                    Secure code sent to <strong>{contact}</strong>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Enter 6-Digit Code</label>
+                    <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" />
+                  </div>
+                  <button disabled={authLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-medium flex justify-center transition-all disabled:opacity-70">
+                    {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Authenticate"}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // ==========================================
-  // VIEW: AUTHENTICATED (MAIN APP)
-  // ==========================================
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
-      {/* --- SIDEBAR --- */}
       <aside className="w-64 bg-[#002147] text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
         <div className="h-1 w-full flex">
             <div className="h-full w-1/3 bg-[#FF9933]"></div>
@@ -306,88 +394,91 @@ export default function SarkarSevaApp() {
         </div>
         <div className="p-6">
           <div className="flex items-center gap-3 text-white mb-1">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/c/cd/Seal_of_Maharashtra.svg" alt="Logo" className="w-8 h-8 bg-white rounded-full p-0.5" />
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#002147]">
+              <Landmark size={18} />
+            </div>
             <span className="text-xl font-bold tracking-wide">SARKAR SEVA</span>
           </div>
-          <div className="text-[10px] font-mono tracking-widest uppercase text-slate-400 pl-11">Mahasrashtra Portal</div>
+          <div className="text-[10px] font-mono tracking-widest uppercase text-slate-400 pl-11">Maharashtra Portal</div>
         </div>
         
         <nav className="flex-1 px-4 py-6 space-y-2">
           {userRole === "citizen" && (
             <button onClick={() => setCurrentView("services")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "services" ? "bg-blue-600/20 text-blue-400 border border-blue-500/30" : "hover:bg-white/5 hover:text-white"}`}>
-              <FileText className="w-5 h-5" /> <span className="font-medium text-sm">Citizen Services</span>
+              <FileText className="w-5 h-5" /> <span className="font-medium text-sm">{t.citizenServices}</span>
             </button>
           )}
           {userRole === "official" && (
             <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "admin" ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30" : "hover:bg-white/5 hover:text-white"}`}>
-              <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">Dept Dashboard</span>
+              <LayoutDashboard className="w-5 h-5" /> <span className="font-medium text-sm">{t.deptDashboard}</span>
             </button>
           )}
           <button onClick={() => setCurrentView("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${currentView === "chat" ? "bg-purple-600/20 text-purple-400 border border-purple-500/30" : "hover:bg-white/5 hover:text-white"}`}>
-            <MessageSquare className="w-5 h-5" /> <span className="font-medium text-sm">Sarkar Mitra AI</span>
+            <MessageSquare className="w-5 h-5" /> <span className="font-medium text-sm">{t.aiMitra}</span>
           </button>
         </nav>
         
         <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 rounded-xl mb-2">
-            <UserCircle className="w-8 h-8 text-slate-400" />
-            <div className="overflow-hidden">
-              <div className="text-xs text-white truncate">{session.user.email || session.user.phone}</div>
-              <div className="text-[10px] text-emerald-400 flex items-center gap-1"><div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div> {userRole === 'official' ? 'Dept Officer' : 'Verified Citizen'}</div>
-            </div>
-          </div>
           <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-white transition-colors">
-            <LogOut className="w-4 h-4" /> Sign Out
+            <LogOut className="w-4 h-4" /> {t.signOut}
           </button>
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* TOP HEADER */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-2">
-             <img src="https://upload.wikimedia.org/wikipedia/en/4/41/Flag_of_India.svg" alt="India" className="h-5 w-7 rounded-sm shadow-sm border border-slate-200" />
+            <div className="w-6 h-4 flex flex-col border border-slate-200 rounded-sm overflow-hidden shadow-sm">
+              <div className="h-1/3 bg-[#FF9933]"></div>
+              <div className="h-1/3 bg-white flex items-center justify-center"><div className="w-1 h-1 bg-[#000080] rounded-full"></div></div>
+              <div className="h-1/3 bg-[#138808]"></div>
+            </div>
              <h2 className="text-lg font-bold text-slate-800 ml-2">
-              {currentView === "services" ? "india.gov.in Beta Portal" : currentView === "admin" ? "Department Oversight" : "AI Support Portal"}
+              {currentView === "services" ? t.nationalPortal : currentView === "admin" ? t.deptDashboard : t.aiMitra}
              </h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              LANGGRAPH SWARM ONLINE
+            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+              <Globe className="w-4 h-4 text-slate-500" />
+              <select value={globalLang} onChange={(e) => setGlobalLang(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer">
+                <option>English</option>
+                <option>Hindi</option>
+                <option>Marathi</option>
+                <option>Kannada</option>
+              </select>
             </div>
             <button onClick={() => supabase.auth.signOut()} className="md:hidden text-slate-500 hover:text-slate-800"><LogOut className="w-5 h-5"/></button>
           </div>
         </header>
 
-        {/* SCROLLABLE VIEW CONTAINER */}
         <div className="flex-1 overflow-y-auto bg-slate-100">
-
-          {/* ==========================================
-              VIEW 1: CITIZEN SERVICES (Search & 5-Step)
-              ========================================== */}
           {currentView === "services" && (
             <div>
-              {/* National Portal Style Search Header */}
               <div className="bg-[#002147] text-white py-12 px-6 shadow-md relative overflow-hidden">
-                <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="Emblem" className="w-96 h-96 -mt-20 -mr-20" />
-                </div>
                 <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
-                  <h1 className="text-3xl font-bold tracking-wide">National Portal of India</h1>
+                  <h1 className="text-3xl font-bold tracking-wide">{t.nationalPortal}</h1>
                   <p className="text-blue-200 font-medium text-sm uppercase tracking-widest">Where Government Information Converges</p>
                   
-                  <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                  <div className="flex flex-col sm:flex-row gap-2 mt-6 relative">
                     <div className="relative flex-1">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
                       <input 
                         type="text" 
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search for Services, Schemes, or Keywords..." 
-                        className="w-full pl-12 pr-4 py-4 rounded-xl text-slate-900 outline-none text-lg shadow-lg focus:ring-4 focus:ring-blue-500/50"
+                        onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder={t.searchPlaceholder} 
+                        className="w-full pl-12 pr-4 py-4 rounded-xl bg-white text-slate-900 placeholder-slate-500 outline-none text-lg shadow-lg focus:ring-4 focus:ring-blue-500/50"
                       />
+                      {showSuggestions && searchQuery && filteredServices.length > 0 && (
+                        <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                          {filteredServices.map(s => (
+                            <button key={s} onClick={() => triggerServiceWorkflow(s)} className="w-full text-left px-6 py-3 text-slate-700 hover:bg-slate-50 border-b border-slate-100 last:border-0 font-medium transition-colors">
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button className="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-xl font-bold text-white shadow-lg transition-colors">
                       Search
@@ -395,13 +486,9 @@ export default function SarkarSevaApp() {
                   </div>
                   
                   <div className="flex flex-wrap justify-center items-center gap-3 pt-4 text-sm text-blue-200">
-                    <span className="font-semibold text-white">Trending Searches:</span>
+                    <span className="font-semibold text-white">{t.trending}</span>
                     {REAL_SERVICES.slice(0, 5).map(service => (
-                      <button 
-                        key={service} 
-                        onClick={() => triggerServiceWorkflow(service)}
-                        className="hover:text-white underline underline-offset-4 decoration-blue-500/50 hover:decoration-white transition-colors"
-                      >
+                      <button key={service} onClick={() => triggerServiceWorkflow(service)} className="hover:text-white underline underline-offset-4 decoration-blue-500/50 hover:decoration-white transition-colors">
                         {service}
                       </button>
                     ))}
@@ -409,11 +496,8 @@ export default function SarkarSevaApp() {
                 </div>
               </div>
 
-              {/* Dynamic Workflow Area */}
               <div className="max-w-4xl mx-auto p-4 md:p-8" ref={workflowRef}>
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4">
-                  
-                  {/* Progress Stepper */}
                   <div className="bg-slate-50 border-b border-slate-200 px-2 py-3 flex overflow-x-auto scrollbar-hide">
                     {["Request", "Consent", "Agent Swarm", "Data Ledger", "Result"].map((lbl, i) => (
                       <div key={lbl} className={`flex-1 min-w-[120px] text-center px-2 py-2 border-b-2 transition-all duration-300 ${step >= i + 1 ? "border-blue-600 text-blue-700" : "border-transparent text-slate-400"}`}>
@@ -424,25 +508,23 @@ export default function SarkarSevaApp() {
                   </div>
 
                   <div className="p-6 md:p-10 min-h-[450px]">
-                    {/* STEP 1: Details */}
                     {step === 1 && (
                       <div className="max-w-xl mx-auto space-y-6 animate-in fade-in duration-500">
                         <div className="text-center mb-8">
                           <div className="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-4"><FileText className="w-6 h-6" /></div>
                           <h3 className="text-2xl font-bold text-slate-900">Application Details</h3>
-                          <p className="text-sm text-slate-500 mt-2">Confirm your service. Our AI agents will handle the verification.</p>
                         </div>
                         
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Target Scheme</label>
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">{t.selectScheme}</label>
                             <select value={formData.scheme} onChange={e => setFormData({...formData, scheme: e.target.value})} className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none font-medium text-slate-900">
                               {REAL_SERVICES.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Applicant Full Name</label>
-                            <input type="text" placeholder="E.g. Ramesh Kumar" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none" />
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">{t.applicantName}</label>
+                            <input type="text" placeholder="E.g. Ramesh Kumar" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none" />
                           </div>
                           <div>
                             <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Secure Govt ID</label>
@@ -453,19 +535,17 @@ export default function SarkarSevaApp() {
                             <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><Shield className="w-3 h-3"/> Edge-masked for strict privacy compliance.</p>
                           </div>
                           <button onClick={() => setStep(2)} className="w-full bg-[#002147] hover:bg-blue-900 text-white py-4 rounded-xl font-medium mt-4 transition-colors shadow-md flex items-center justify-center gap-2">
-                            Proceed to Consent <ChevronRight className="w-4 h-4"/>
+                            {t.proceedConsent} <ChevronRight className="w-4 h-4"/>
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {/* STEP 2: Consent */}
                     {step === 2 && (
                       <div className="max-w-xl mx-auto space-y-6 animate-in slide-in-from-right-8 duration-500">
                          <div className="text-center mb-8">
                           <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4"><Shield className="w-6 h-6" /></div>
                           <h3 className="text-2xl font-bold text-slate-900">Digital Authorization</h3>
-                          <p className="text-sm text-slate-500 mt-2">Data Protection & Interoperability Gate</p>
                         </div>
 
                         <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-slate-700 leading-relaxed shadow-inner">
@@ -492,19 +572,16 @@ export default function SarkarSevaApp() {
                       </div>
                     )}
 
-                    {/* STEP 3: Swarm Execution */}
                     {step === 3 && (
                       <div className="max-w-2xl mx-auto text-center space-y-10 animate-in fade-in duration-500 py-8">
                         <div>
                           <h3 className="text-2xl font-bold text-slate-900">Swarm Orchestration</h3>
-                          <p className="text-sm text-slate-500 mt-2">LangGraph agents are processing your application in real-time.</p>
                         </div>
 
                         <div className="relative">
                           <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto relative z-10 border-4 border-white shadow-xl">
                             <Network className="w-10 h-10 text-blue-600 animate-pulse" />
                           </div>
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-400/20 rounded-full animate-ping"></div>
                         </div>
 
                         <div>
@@ -531,14 +608,12 @@ export default function SarkarSevaApp() {
                       </div>
                     )}
 
-                    {/* STEP 4: Ledger/JSON */}
                     {step === 4 && (
                       <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-8 duration-500">
                         <div className="flex items-center gap-3 mb-6">
                           <Server className="w-8 h-8 text-slate-700" />
                           <div>
                             <h3 className="text-xl font-bold text-slate-900">Interoperability Ledger</h3>
-                            <p className="text-xs text-slate-500">Raw API Payload from Departmental Data Fetch</p>
                           </div>
                         </div>
 
@@ -570,10 +645,6 @@ export default function SarkarSevaApp() {
   "ai_validation": {
     "anomaly_detected": false,
     "confidence_score": 0.99
-  },
-  "security": {
-    "consent_verified": true,
-    "encryption": "AES-256"
   }
 }`}
                           </pre>
@@ -584,7 +655,6 @@ export default function SarkarSevaApp() {
                       </div>
                     )}
 
-                    {/* STEP 5: Success */}
                     {step === 5 && (
                       <div className="max-w-md mx-auto text-center space-y-6 animate-in zoom-in-95 duration-500 py-8">
                         <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner border-4 border-white">
@@ -606,10 +676,6 @@ export default function SarkarSevaApp() {
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Service</span>
                             <span className="font-semibold text-slate-800">{formData.scheme}</span>
                           </div>
-                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Applicant</span>
-                            <span className="font-semibold text-slate-800">{formData.name || "Citizen"}</span>
-                          </div>
                           <div className="flex justify-between items-center pt-1">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Final Status</span>
                             <span className="text-emerald-700 font-bold flex items-center gap-1"><CheckCircle2 className="w-4 h-4"/> Verified</span>
@@ -627,27 +693,13 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
-
-          {/* ==========================================
-              VIEW 2: ADMIN DASHBOARD
-              ========================================== */}
           {currentView === "admin" && (
             <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Department Oversight</h1>
-                  <p className="text-slate-500 mt-1">Live monitoring of cross-department API transactions and AI Validation Flags.</p>
-                </div>
-              </div>
-
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDashboard}</h1>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Data Table */}
                 <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
                   <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                     <h2 className="font-bold text-slate-800 flex items-center gap-2"><Database className="w-4 h-4 text-blue-600"/> Live Transaction Queue</h2>
-                    <span className="text-xs font-medium bg-white border border-slate-200 px-3 py-1 rounded-full shadow-sm text-slate-500 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Auto-Sync
-                    </span>
                   </div>
                   <div className="overflow-x-auto flex-1">
                     <table className="w-full text-left text-sm whitespace-nowrap">
@@ -684,99 +736,35 @@ export default function SarkarSevaApp() {
                     </table>
                   </div>
                 </div>
-
-                {/* AI Review Card */}
-                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col">
-                  <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-                    <h2 className="font-bold text-slate-800 flex items-center gap-2"><Shield className="w-4 h-4 text-amber-500"/> Agent Flag Review</h2>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Target ID</p>
-                          <p className="font-mono font-bold text-slate-800">TXN-IND-11234</p>
-                        </div>
-                        <span className="bg-amber-100 text-amber-800 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide">Action Required</span>
-                      </div>
-                      
-                      <p className="text-sm text-slate-600 mb-4 pb-4 border-b border-slate-100">
-                        The Validation Agent detected a discrepancy in cross-departmental records for applicant <strong className="text-slate-900">John Doe</strong>.
-                      </p>
-
-                      <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-red-200 shadow-sm">
-                          <span className="text-xs font-bold text-slate-500">Revenue DB</span>
-                          <span className="text-sm font-bold text-red-600">J. Doe</span>
-                        </div>
-                        <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                          <span className="text-xs font-bold text-slate-500">Identity DB</span>
-                          <span className="text-sm font-bold text-slate-900">John Doe</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3 pt-6 mt-6 border-t border-slate-100">
-                      <button className="flex-1 bg-[#002147] text-white py-3 rounded-xl font-medium text-sm hover:bg-blue-900 transition shadow-sm">Approve Override</button>
-                      <button className="flex-1 bg-white border border-slate-300 text-slate-700 py-3 rounded-xl font-medium text-sm hover:bg-slate-50 transition">Reject Request</button>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
-
-          {/* ==========================================
-              VIEW 3: CHATBOT (SARKAR MITRA)
-              ========================================== */}
           {currentView === "chat" && (
             <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[75vh] min-h-[500px] overflow-hidden">
-                {/* Chat Header */}
-                <div className="bg-[#002147] p-4 flex justify-between items-center shrink-0 text-white">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border-2 border-blue-400/30 shadow-lg">
-                      <MessageSquare className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold tracking-wide">Sarkar Mitra AI</h2>
-                      <p className="text-[10px] text-blue-200 uppercase tracking-widest font-mono flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> Active Support Agent
-                      </p>
-                    </div>
+                <div className="bg-[#002147] p-4 flex items-center gap-3 shrink-0 text-white">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center border-2 border-blue-400/30 shadow-lg">
+                    <MessageSquare className="w-5 h-5 text-white" />
                   </div>
-                  
-                  {/* Language Selector */}
-                  <div className="flex items-center gap-2 bg-blue-900/50 px-3 py-1.5 rounded-lg border border-blue-800/50">
-                    <Globe className="w-4 h-4 text-blue-200" />
-                    <select 
-                      value={chatLanguage} 
-                      onChange={(e) => setChatLanguage(e.target.value)}
-                      className="bg-transparent text-sm font-medium text-white outline-none cursor-pointer appearance-none pr-4"
-                    >
-                      <option className="text-black">English</option>
-                      <option className="text-black">Hindi</option>
-                      <option className="text-black">Marathi</option>
-                      <option className="text-black">Kannada</option>
-                    </select>
+                  <div>
+                    <h2 className="font-bold tracking-wide">{t.aiMitra}</h2>
+                    <p className="text-[10px] text-blue-200 uppercase tracking-widest font-mono flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span> Active Support Agent
+                    </p>
                   </div>
                 </div>
                 
-                {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
                   {messages.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                       <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                        msg.role === "user" 
-                          ? "bg-blue-600 text-white rounded-br-none" 
-                          : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
+                        msg.role === "user" ? "bg-blue-600 text-white rounded-br-none" : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
                       }`}>
                         {msg.text}
                       </div>
                     </div>
                   ))}
-                  
                   {chatLoading && (
                     <div className="flex justify-start animate-in fade-in">
                       <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-none shadow-sm flex gap-2 items-center">
@@ -789,11 +777,11 @@ export default function SarkarSevaApp() {
                   <div ref={chatEndRef} />
                 </div>
                 
-                {/* Input Area */}
                 <div className="p-4 bg-white border-t border-slate-200 shrink-0">
                   <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
                     
-                    <button type="button" onClick={simulateUpload} className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Upload Document">
+                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Upload Document">
                       <Paperclip className="w-5 h-5" />
                     </button>
 
@@ -802,8 +790,8 @@ export default function SarkarSevaApp() {
                         type="text" 
                         value={chatInput} 
                         onChange={e => setChatInput(e.target.value)} 
-                        placeholder={isRecording ? "Listening..." : `Ask about scheme eligibility in ${chatLanguage}...`} 
-                        className={`w-full border rounded-xl px-4 py-3.5 outline-none text-sm transition-all ${isRecording ? "bg-red-50 border-red-200 text-red-900 placeholder-red-400" : "bg-slate-50 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white"}`}
+                        placeholder={isRecording ? "Listening..." : t.askEligibility} 
+                        className={`w-full border rounded-xl px-4 py-3.5 outline-none text-sm text-slate-900 transition-all ${isRecording ? "bg-red-50 border-red-200 placeholder-red-400" : "bg-slate-50 border-slate-300 focus:ring-2 focus:ring-blue-600 focus:bg-white"}`}
                         disabled={chatLoading || isRecording}
                       />
                     </div>
