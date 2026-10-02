@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { Turnstile } from '@marsidev/react-turnstile';
 import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
   Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
-  Paperclip, Mic, Building, Users, Clock, Filter, RefreshCw
+  Paperclip, Mic, Building, Users, Clock, Filter
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
@@ -47,72 +48,36 @@ const MOCK_REQUESTS = [
 
 const TRANSLATIONS: any = {
   English: {
-    portalAccess: "Official Portal Access",
-    citizenPortal: "Citizen Portal",
-    deptOfficial: "Dept Official",
-    citizenServices: "Citizen Services",
-    deptDashboard: "Department Oversight",
-    aiMitra: "Sarkar Mitra AI",
-    searchPlaceholder: "Search for Services, Schemes, or Keywords...",
-    trending: "Trending Searches:",
-    selectScheme: "Target Scheme",
-    applicantName: "Applicant Full Name",
-    proceedConsent: "Proceed to Consent",
-    signOut: "Sign Out",
+    portalAccess: "Official Portal Access", citizenPortal: "Citizen Portal", deptOfficial: "Dept Official",
+    citizenServices: "Citizen Services", deptDashboard: "Department Oversight", aiMitra: "Sarkar Mitra AI",
+    searchPlaceholder: "Search for Services, Schemes, or Keywords...", trending: "Trending Searches:", selectScheme: "Target Scheme",
+    applicantName: "Applicant Full Name", proceedConsent: "Proceed to Consent", signOut: "Sign Out",
     welcome: "Namaste. I am Sarkar Mitra, your AI guide. How can I assist you with government services today?",
-    askEligibility: "Ask about scheme eligibility...",
-    nationalPortal: "National Portal of India"
+    askEligibility: "Ask about scheme eligibility...", nationalPortal: "National Portal of India"
   },
   Hindi: {
-    portalAccess: "आधिकारिक पोर्टल एक्सेस",
-    citizenPortal: "नागरिक पोर्टल",
-    deptOfficial: "विभागीय अधिकारी",
-    citizenServices: "नागरिक सेवाएं",
-    deptDashboard: "विभाग अवलोकन",
-    aiMitra: "सरकार मित्र AI",
-    searchPlaceholder: "सेवाओं, योजनाओं या कीवर्ड खोजें...",
-    trending: "ट्रेंडिंग खोजें:",
-    selectScheme: "लक्षित योजना",
-    applicantName: "आवेदक का पूरा नाम",
-    proceedConsent: "सहमति के लिए आगे बढ़ें",
-    signOut: "साइन आउट",
+    portalAccess: "आधिकारिक पोर्टल एक्सेस", citizenPortal: "नागरिक पोर्टल", deptOfficial: "विभागीय अधिकारी",
+    citizenServices: "नागरिक सेवाएं", deptDashboard: "विभाग अवलोकन", aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "सेवाओं, योजनाओं या कीवर्ड खोजें...", trending: "ट्रेंडिंग खोजें:", selectScheme: "लक्षित योजना",
+    applicantName: "आवेदक का पूरा नाम", proceedConsent: "सहमति के लिए आगे बढ़ें", signOut: "साइन आउट",
     welcome: "नमस्ते। मैं सरकार मित्र हूँ, आपका AI मार्गदर्शक। मैं आज सरकारी सेवाओं में आपकी कैसे मदद कर सकता हूँ?",
-    askEligibility: "योजना पात्रता के बारे में पूछें...",
-    nationalPortal: "भारत का राष्ट्रीय पोर्टल"
+    askEligibility: "योजना पात्रता के बारे में पूछें...", nationalPortal: "भारत का राष्ट्रीय पोर्टल"
   },
   Marathi: {
-    portalAccess: "अधिकृत पोर्टल प्रवेश",
-    citizenPortal: "नागरिक पोर्टल",
-    deptOfficial: "विभागीय अधिकारी",
-    citizenServices: "नागरिक सेवा",
-    deptDashboard: "विभाग देखरेख",
-    aiMitra: "सरकार मित्र AI",
-    searchPlaceholder: "सेवा, योजना किंवा कीवर्ड शोधा...",
-    trending: "ट्रेंडिंग शोध:",
-    selectScheme: "लक्ष्य योजना",
-    applicantName: "अर्जदाराचे पूर्ण नाव",
-    proceedConsent: "संमतीसाठी पुढे जा",
-    signOut: "साइन आउट",
+    portalAccess: "अधिकृत पोर्टल प्रवेश", citizenPortal: "नागरिक पोर्टल", deptOfficial: "विभागीय अधिकारी",
+    citizenServices: "नागरिक सेवा", deptDashboard: "विभाग देखरेख", aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "सेवा, योजना किंवा कीवर्ड शोधा...", trending: "ट्रेंडिंग शोध:", selectScheme: "लक्ष्य योजना",
+    applicantName: "अर्जदाराचे पूर्ण नाव", proceedConsent: "संमतीसाठी पुढे जा", signOut: "साइन आउट",
     welcome: "नमस्कार. मी सरकार मित्र आहे, तुमचा AI मार्गदर्शक. मी आज तुम्हाला सरकारी सेवांमध्ये कशी मदत करू शकतो?",
-    askEligibility: "योजना पात्रतेबद्दल विचारा...",
-    nationalPortal: "भारताचे राष्ट्रीय पोर्टल"
+    askEligibility: "योजना पात्रतेबद्दल विचारा...", nationalPortal: "भारताचे राष्ट्रीय पोर्टल"
   },
   Kannada: {
-    portalAccess: "ಅಧಿಕೃತ ಪೋರ್ಟಲ್ ಪ್ರವೇಶ",
-    citizenPortal: "ನಾಗರಿಕ ಪೋರ್ಟಲ್",
-    deptOfficial: "ಇಲಾಖಾ ಅಧಿಕಾರಿ",
-    citizenServices: "ನಾಗರಿಕ ಸೇವೆಗಳು",
-    deptDashboard: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ",
-    aiMitra: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI",
-    searchPlaceholder: "ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್‌‌ಗಳನ್ನು ಹುಡುಕಿ...",
-    trending: "ಟ್ರೆಂಡಿಂಗ್ ಹುಡುಕಾಟಗಳು:",
-    selectScheme: "ಗುರಿ ಯೋಜನೆ",
-    applicantName: "ಅರ್ಜಿದಾರರ ಪೂರ್ಣ ಹೆಸರು",
-    proceedConsent: "ಸಮ್ಮತಿಗೆ ಮುಂದುವರಿಯಿರಿ",
-    signOut: "ಸೈನ್ ಔಟ್",
+    portalAccess: "ಅಧಿಕೃತ ಪೋರ್ಟಲ್ ಪ್ರವೇಶ", citizenPortal: "ನಾಗರಿಕ ಪೋರ್ಟಲ್", deptOfficial: "ಇಲಾಖಾ ಅಧಿಕಾರಿ",
+    citizenServices: "ನಾಗರಿಕ ಸೇವೆಗಳು", deptDashboard: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ", aiMitra: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI",
+    searchPlaceholder: "ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್‌‌‌‌ಗಳನ್ನು ಹುಡುಕಿ...", trending: "ಟ್ರೆಂಡಿಂಗ್ ಹುಡುಕಾಟಗಳು:", selectScheme: "ಗುರಿ ಯೋಜನೆ",
+    applicantName: "ಅರ್ಜಿದಾರರ ಪೂರ್ಣ ಹೆಸರು", proceedConsent: "ಸಮ್ಮತಿಗೆ ಮುಂದುವರಿಯಿರಿ", signOut: "ಸೈನ್ ಔಟ್",
     welcome: "ನಮಸ್ಕಾರ. ನಾನು ಸರ್ಕಾರ್ ಮಿತ್ರ, ನಿಮ್ಮ AI ಮಾರ್ಗದರ್ಶಿ. ಸರ್ಕಾರಿ ಸೇವೆಗಳೊಂದಿಗೆ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
-    askEligibility: "ಯೋಜನೆಯ ಅರ್ಹತೆಯ ಬಗ್ಗೆ ಕೇಳಿ...",
-    nationalPortal: "ಭಾರತದ ರಾಷ್ಟ್ರೀಯ ಪೋರ್ಟಲ್"
+    askEligibility: "ಯೋಜನೆಯ ಅರ್ಹತೆಯ ಬಗ್ಗೆ ಕೇಳಿ...", nationalPortal: "ಭಾರತದ ರಾಷ್ಟ್ರೀಯ ಪೋರ್ಟಲ್"
   }
 };
 
@@ -133,11 +98,10 @@ export default function SarkarSevaApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // CAPTCHA State
-  const [captchaCode, setCaptchaCode] = useState("");
-  const [captchaInput, setCaptchaInput] = useState("");
+  // Cloudflare Turnstile State
+  const [captchaToken, setCaptchaToken] = useState<string>("");
 
-  // Workflow State - Updated to include phone and governmentId
+  // Workflow State (Updated to include phone and governmentId for real database insertion)
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
@@ -158,19 +122,7 @@ export default function SarkarSevaApp() {
   const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Generate a secure verification CAPTCHA
-  const generateCaptcha = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; 
-    let code = "";
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaCode(code);
-    setCaptchaInput("");
-  };
-
   useEffect(() => {
-    generateCaptcha();
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -198,23 +150,24 @@ export default function SarkarSevaApp() {
     e.preventDefault();
     setAuthError("");
 
-    // Verify CAPTCHA
-    if (captchaInput.trim().toUpperCase() !== captchaCode) {
-      setAuthError("Incorrect CAPTCHA verification code. Please try again.");
-      generateCaptcha();
+    if (!captchaToken) {
+      setAuthError("Please wait for the security check to complete.");
       return;
     }
 
     setAuthLoading(true);
     try {
+      const options = { captchaToken }; 
+      
       const { error } = authMode === "email"
-        ? await supabase.auth.signInWithOtp({ email: contact })
-        : await supabase.auth.signInWithOtp({ phone: contact });
+        ? await supabase.auth.signInWithOtp({ email: contact, options })
+        : await supabase.auth.signInWithOtp({ phone: contact, options });
+        
       if (error) throw error;
       setOtpSent(true);
     } catch (err: any) {
       setAuthError(err.message);
-      generateCaptcha();
+      setCaptchaToken(""); 
     } finally {
       setAuthLoading(false);
     }
@@ -250,20 +203,18 @@ export default function SarkarSevaApp() {
     workflowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Upgraded to handle real Database insertion
+  // Upgraded Pipeline with Secure Database Insertion
   const runPipeline = async () => {
     setStep(3);
     setPipelineProgress(0);
 
     try {
-      // 1. Hash the ID on the client side
       const secureIdHash = await generateSecureHash(formData.governmentId);
-
-      // 2. Insert into Supabase (only the irreversible hash is sent)
+      
       const { error } = await supabase.from('citizens').insert({
-        id: session.user.id,
+        id: session?.user?.id,
         name: formData.name,
-        phone: formData.phone || contact, // Fallback to login credential if phone is empty
+        phone: formData.phone || contact, 
         aadhaar_hash: secureIdHash 
       });
 
@@ -274,7 +225,6 @@ export default function SarkarSevaApp() {
       console.error("Hashing Error:", err);
     }
 
-    // 3. Proceed with visual orchestration
     const agents = [
       "1. Request Agent (Intent Extraction)",
       "2. Routing Agent (API Mapping)",
@@ -356,6 +306,9 @@ export default function SarkarSevaApp() {
     }
   };
 
+  // ==========================================
+  // VIEW 0: LOGIN & AUTHENTICATION SCREEN
+  // ==========================================
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-50 flex font-sans">
@@ -407,10 +360,10 @@ export default function SarkarSevaApp() {
               </div>
 
               <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); setCaptchaToken(""); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Users className="w-4 h-4"/> {t.citizenPortal}
                 </button>
-                <button onClick={() => { setLoginTab("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("official"); setOtpSent(false); setCaptchaToken(""); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Building className="w-4 h-4"/> {t.deptOfficial}
                 </button>
               </div>
@@ -440,39 +393,21 @@ export default function SarkarSevaApp() {
                         type={authMode === "email" || loginTab === "official" ? "email" : "tel"} 
                         required placeholder={loginTab === "official" ? "officer@maharashtra.gov.in" : authMode === "email" ? "citizen@example.com" : "+91..."} 
                         value={contact} onChange={e => setContact(e.target.value)} 
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all" 
                       />
                     </div>
                   </div>
 
-                  {/* CAPTCHA SECTION */}
-                  <div className="space-y-2 pt-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Security Verification</label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 select-none font-mono text-xl font-extrabold tracking-[0.3em] text-slate-800 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center shadow-inner relative overflow-hidden">
-                        <span className="line-through decoration-blue-600/70 decoration-2 italic">{captchaCode}</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={generateCaptcha} 
-                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-all flex items-center justify-center"
-                        title="Refresh CAPTCHA"
-                      >
-                        <RefreshCw className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <input 
-                      type="text" 
-                      required 
-                      maxLength={5}
-                      placeholder="Enter the 5 characters above" 
-                      value={captchaInput} 
-                      onChange={e => setCaptchaInput(e.target.value)} 
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono uppercase tracking-widest focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                  {/* REAL CLOUDFLARE TURNSTILE WIDGET */}
+                  <div className="flex justify-center pt-2">
+                    <Turnstile 
+                      siteKey="0x4AAAAAAFL-BO3Yc2FzjxaT" 
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      onError={() => setAuthError("Turnstile verification failed. Please refresh.")}
                     />
                   </div>
 
-                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-2 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
+                  <button disabled={authLoading || !captchaToken} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-4 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
                   </button>
                 </form>
@@ -483,7 +418,7 @@ export default function SarkarSevaApp() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Enter 6-Digit Code</label>
-                    <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" />
+                    <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none transition-all" />
                   </div>
                   <button disabled={authLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-medium flex justify-center transition-all disabled:opacity-70">
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Authenticate"}
@@ -497,6 +432,9 @@ export default function SarkarSevaApp() {
     );
   }
 
+  // ==========================================
+  // VIEW 1, 2, & 3: FULL AUTHENTICATED DASHBOARD
+  // ==========================================
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
       <aside className="w-64 bg-[#002147] text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
