@@ -2,141 +2,127 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { 
-  Building, User, FileText, CheckCircle2, Search, Shield, 
-  Activity, Layers, ArrowRight, Home, List, HelpCircle, 
-  Check, Loader2, Landmark, Globe, Users, Lock, ChevronRight, 
-  UserCircle, Network, RefreshCw, AlertTriangle, Paperclip, 
-  Mic, Send, Bot, X, FileDigit
+  Building, User, FileText, CheckCircle2, Search, Shield, Activity, 
+  Layers, ArrowRight, Home, List, HelpCircle, Check, Loader2, 
+  Lock, ChevronRight, UserCircle, Database, Network, Globe, Paperclip, Mic, 
+  Users, Clock, Filter, RefreshCw, Send, LayoutDashboard, MessageSquare, LogOut, AlertTriangle
 } from "lucide-react";
 
-// --- TRANSLATION DICTIONARY ---
+// Translations mapping
 const TRANSLATIONS: any = {
   English: {
-    brandName: "Sarkar Seva",
-    govLabel: "Government of Maharashtra | Govt. of India",
-    home: "Home", about: "About", works: "How it Works", getStarted: "Get Started",
-    heroTitle: "Government services", heroHighlight: "connected.",
-    heroSub: "One request. Multiple departments. One coordinated journey.",
-    startReq: "Start a request", watchHow: "Watch how it works",
-    mumbai: "Mumbai", gateway: "Gateway of India",
-    welcome: "Welcome back!", loginSub: "Log in to continue to Sarkar Seva.",
-    citizen: "Citizen", official: "Dept Official",
-    mobile: "Mobile", email: "Email", aadhaar: "Aadhaar",
-    captcha: "Security Verification", refresh: "Refresh",
-    sendOtp: "Continue", enterOtp: "Enter 6-Digit OTP", verify: "Verify & Authenticate",
-    goodMorning: "Good morning", reqMatters: "Your request matters",
-    whatNeed: "What do you need today?", searchPlace: "e.g. Check my housing scheme eligibility...",
-    popServices: "Popular Services",
-    deptDash: "Department Oversight", totalReq: "Total Requests", cleared: "Cleared by AI",
-    aiAssistant: "Sarkar Mitra AI", askAi: "Ask me anything...",
-    allSync: "All systems in sync!", eligible: "Eligible"
+    portalAccess: "Official Portal Access",
+    citizenPortal: "Citizen Login",
+    deptOfficial: "Official Login",
+    citizenServices: "Home",
+    deptDashboard: "Department Oversight",
+    aiMitra: "Sarkar Mitra AI",
+    searchPlaceholder: "e.g. Check my housing scheme eligibility...",
+    trending: "Trending Searches:",
+    applicantName: "Applicant Full Name",
+    proceedConsent: "Proceed to Consent",
+    signOut: "Sign Out",
+    welcome: "Namaste. I am Sarkar Mitra, your AI guide. How can I assist you with government services today?",
+    nationalPortal: "Sarkar Seva",
+    popular: "Popular Services"
   },
   Hindi: {
-    brandName: "सरकार सेवा",
-    govLabel: "महाराष्ट्र शासन | भारत सरकार",
-    home: "होम", about: "बारे में", works: "यह कैसे काम करता है", getStarted: "शुरू करें",
-    heroTitle: "सरकारी सेवाएं", heroHighlight: "अब एक साथ।",
-    heroSub: "एक अनुरोध। कई विभाग। एक समन्वित यात्रा।",
-    startReq: "अनुरोध शुरू करें", watchHow: "देखें यह कैसे काम करता है",
-    mumbai: "मुंबई", gateway: "गेटवे ऑफ इंडिया",
-    welcome: "वापसी पर स्वागत है!", loginSub: "सरकार सेवा में जारी रखने के लिए लॉग इन करें।",
-    citizen: "नागरिक", official: "विभागीय अधिकारी",
-    mobile: "मोबाइल", email: "ईमेल", aadhaar: "आधार",
-    captcha: "सुरक्षा सत्यापन", refresh: "रिफ्रेश",
-    sendOtp: "आगे बढ़ें", enterOtp: "6-अंकीय OTP दर्ज करें", verify: "सत्यापित करें",
-    goodMorning: "सुप्रभात", reqMatters: "आपका अनुरोध महत्वपूर्ण है",
-    whatNeed: "आज आपको क्या चाहिए?", searchPlace: "उदा. मेरी आवास योजना पात्रता जांचें...",
-    popServices: "लोकप्रिय सेवाएं",
-    deptDash: "विभाग अवलोकन", totalReq: "कुल अनुरोध", cleared: "AI द्वारा साफ़ किया गया",
-    aiAssistant: "सरकार मित्र AI", askAi: "मुझसे कुछ भी पूछें...",
-    allSync: "सभी सिस्टम सिंक में हैं!", eligible: "पात्र"
+    portalAccess: "आधिकारिक पोर्टल एक्सेस",
+    citizenPortal: "नागरिक लॉगिन",
+    deptOfficial: "अधिकारी लॉगिन",
+    citizenServices: "होम",
+    deptDashboard: "विभाग अवलोकन",
+    aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "जैसे, मेरी आवास योजना पात्रता की जांच करें...",
+    trending: "ट्रेंडिंग खोजें:",
+    applicantName: "आवेदक का पूरा नाम",
+    proceedConsent: "सहमति के लिए आगे बढ़ें",
+    signOut: "साइन आउट",
+    welcome: "नमस्ते। मैं सरकार मित्र हूँ, आपका AI मार्गदर्शक। मैं आज आपकी कैसे मदद कर सकता हूँ?",
+    nationalPortal: "सरकार सेवा",
+    popular: "लोकप्रिय सेवाएं"
   },
   Marathi: {
-    brandName: "सरकार सेवा",
-    govLabel: "महाराष्ट्र शासन | भारत सरकार",
-    home: "मुख्यपृष्ठ", about: "आमच्याबद्दल", works: "हे कसे कार्य करते", getStarted: "सुरू करा",
-    heroTitle: "सरकारी सेवा", heroHighlight: "आता जोडलेल्या.",
-    heroSub: "एक विनंती. अनेक विभाग. एक समन्वित प्रवास.",
-    startReq: "विनंती सुरू करा", watchHow: "हे कसे कार्य करते ते पहा",
-    mumbai: "मुंबई", gateway: "गेटवे ऑफ इंडिया",
-    welcome: "स्वागत आहे!", loginSub: "सरकार सेवा सुरू ठेवण्यासाठी लॉग इन करा.",
-    citizen: "नागरिक", official: "विभागीय अधिकारी",
-    mobile: "मोबाईल", email: "ईमेल", aadhaar: "आधार",
-    captcha: "सुरक्षा पडताळणी", refresh: "रिफ्रेश करा",
-    sendOtp: "पुढे जा", enterOtp: "6-अंकी OTP प्रविष्ट करा", verify: "पडताळणी करा",
-    goodMorning: "शुभ प्रभात", reqMatters: "तुमची विनंती महत्त्वाची आहे",
-    whatNeed: "तुम्हाला आज काय हवे आहे?", searchPlace: "उदा. माझी गृहनिर्माण योजना पात्रता तपासा...",
-    popServices: "लोकप्रिय सेवा",
-    deptDash: "विभाग देखरेख", totalReq: "एकूण विनंत्या", cleared: "AI द्वारे मंजूर",
-    aiAssistant: "सरकार मित्र AI", askAi: "मला काहीही विचारा...",
-    allSync: "सर्व सिस्टम सिंकमध्ये!", eligible: "पात्र"
+    portalAccess: "अधिकृत पोर्टल प्रवेश",
+    citizenPortal: "नागरिक लॉगिन",
+    deptOfficial: "अधिकारी लॉगिन",
+    citizenServices: "होम",
+    deptDashboard: "विभाग देखरेख",
+    aiMitra: "सरकार मित्र AI",
+    searchPlaceholder: "उदा. माझी गृहनिर्माण योजना पात्रता तपासा...",
+    trending: "ट्रेंडिंग शोध:",
+    applicantName: "अर्जदाराचे पूर्ण नाव",
+    proceedConsent: "संमतीसाठी पुढे जा",
+    signOut: "साइन आउट",
+    welcome: "नमस्कार. मी सरकार मित्र आहे. मी आज तुम्हाला कशी मदत करू शकतो?",
+    nationalPortal: "सरकार सेवा",
+    popular: "लोकप्रिय सेवा"
   },
   Kannada: {
-    brandName: "ಸರ್ಕಾರ್ ಸೇವಾ",
-    govLabel: "ಮಹಾರಾಷ್ಟ್ರ ಸರ್ಕಾರ | ಭಾರತ ಸರ್ಕಾರ",
-    home: "ಮುಖಪುಟ", about: "ಬಗ್ಗೆ", works: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ", getStarted: "ಪ್ರಾರಂಭಿಸಿ",
-    heroTitle: "ಸರ್ಕಾರಿ ಸೇವೆಗಳು", heroHighlight: "ಸಂಪರ್ಕಗೊಂಡಿವೆ.",
-    heroSub: "ಒಂದು ವಿನಂತಿ. ಅನೇಕ ಇಲಾಖೆಗಳು. ಒಂದು ಸಂಘಟಿತ ಪ್ರಯಾಣ.",
-    startReq: "ವಿನಂತಿಯನ್ನು ಪ್ರಾರಂಭಿಸಿ", watchHow: "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ನೋಡಿ",
-    mumbai: "ಮುಂಬೈ", gateway: "ಗೇಟ್ವೇ ಆಫ್ ಇಂಡಿಯಾ",
-    welcome: "ಸ್ವಾಗತ!", loginSub: "ಸರ್ಕಾರ್ ಸೇವಾ ಮುಂದುವರಿಸಲು ಲಾಗ್ ಇನ್ ಮಾಡಿ.",
-    citizen: "ನಾಗರಿಕ", official: "ಇಲಾಖಾ ಅಧಿಕಾರಿ",
-    mobile: "ಮೊಬೈಲ್", email: "ಇಮೇಲ್", aadhaar: "ಆಧಾರ್",
-    captcha: "ಭದ್ರತಾ ಪರಿಶೀಲನೆ", refresh: "ರಿಫ್ರೆಶ್",
-    sendOtp: "ಮುಂದುವರಿಯಿರಿ", enterOtp: "6-ಅಂಕಿಯ OTP ನಮೂದಿಸಿ", verify: "ಪರಿಶೀಲಿಸಿ",
-    goodMorning: "ಶುಭೋದಯ", reqMatters: "ನಿಮ್ಮ ವಿನಂತಿ ಮುಖ್ಯವಾಗಿದೆ",
-    whatNeed: "ಇಂದು ನಿಮಗೆ ಏನು ಬೇಕು?", searchPlace: "ಉದಾ. ನನ್ನ ವಸತಿ ಯೋಜನೆ ಅರ್ಹತೆಯನ್ನು ಪರಿಶೀಲಿಸಿ...",
-    popServices: "ಜನಪ್ರಿಯ ಸೇವೆಗಳು",
-    deptDash: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ", totalReq: "ಒಟ್ಟು ವಿನಂತಿಗಳು", cleared: "AI ನಿಂದ ತೆರವುಗೊಳಿಸಲಾಗಿದೆ",
-    aiAssistant: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI", askAi: "ನನ್ನನ್ನು ಏನು ಬೇಕಾದರೂ ಕೇಳಿ...",
-    allSync: "ಎಲ್ಲಾ ಸಿಸ್ಟಮ್‌ಗಳು ಸಿಂಕ್‌ನಲ್ಲಿವೆ!", eligible: "ಅರ್ಹರು"
+    portalAccess: "ಅಧಿಕೃತ ಪೋರ್ಟಲ್ ಪ್ರವೇಶ",
+    citizenPortal: "ನಾಗರಿಕ ಲಾಗಿನ್",
+    deptOfficial: "ಅಧಿಕಾರಿ ಲಾಗಿನ್",
+    citizenServices: "ಮುಖಪುಟ",
+    deptDashboard: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ",
+    aiMitra: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI",
+    searchPlaceholder: "ಉದಾ. ವಸತಿ ಯೋಜನೆ ಅರ್ಹತೆಯನ್ನು ಪರಿಶೀಲಿಸಿ...",
+    trending: "ಟ್ರೆಂಡಿಂಗ್:",
+    applicantName: "ಅರ್ಜಿದಾರರ ಪೂರ್ಣ ಹೆಸರು",
+    proceedConsent: "ಸಮ್ಮತಿಗೆ ಮುಂದುವರಿಯಿರಿ",
+    signOut: "ಸೈನ್ ಔಟ್",
+    welcome: "ನಮಸ್ಕಾರ. ನಾನು ಸರ್ಕಾರ್ ಮಿತ್ರ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+    nationalPortal: "ಸರ್ಕಾರ್ ಸೇವಾ",
+    popular: "ಜನಪ್ರಿಯ ಸೇವೆಗಳು"
   }
 };
 
 const REAL_SERVICES = [
   "Housing Scheme Eligibility",
   "Income Certificate Issuance",
-  "Property Records Registration",
+  "Property Records Validation",
   "Senior Citizen Registration",
-  "Online Marriage Registration",
   "Ayushman Bharat Card",
-  "PAN Card Services",
+  "PAN Card Services"
 ];
 
 export default function SarkarSevaApp() {
-  // Global State
-  const [step, setStep] = useState(0);
-  const [lang, setLang] = useState("English");
-  const t = TRANSLATIONS[lang];
+  const [globalLang, setGlobalLang] = useState("English");
+  const t = TRANSLATIONS[globalLang];
 
-  // Auth State
-  const [loginRole, setLoginRole] = useState<"citizen" | "official">("citizen");
-  const [authMethod, setAuthMethod] = useState<"mobile" | "email" | "aadhaar">("mobile");
-  const [contact, setContact] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
+  // System State
+  const [step, setStep] = useState(0); 
+  const [currentView, setCurrentView] = useState("services"); 
+  const [userRole, setUserRole] = useState<"citizen" | "official">("citizen");
   
-  // Captcha State
+  // Auth State
+  const [loginTab, setLoginTab] = useState<"citizen" | "official">("citizen");
+  const [authMode, setAuthMode] = useState<"mobile" | "email" | "aadhaar">("mobile");
+  const [contact, setContact] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  
+  // CAPTCHA State
   const [captchaCode, setCaptchaCode] = useState("");
   const [captchaInput, setCaptchaInput] = useState("");
 
-  // Dashboard & Workflow State
+  // Workflow State
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [orchestrationProgress, setOrchestrationProgress] = useState(0);
+  const [workflowStep, setWorkflowStep] = useState(0);
+  const [orchestrationProgress, setOrchestrationProgress] = useState(-1);
   const [txId, setTxId] = useState("");
-  const [serviceContext, setServiceContext] = useState("Housing Scheme Eligibility");
+  const [activeScheme, setActiveScheme] = useState("");
 
-  // AI Chat State
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Chat State
   const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState([{ role: "agent", text: "Namaste! I am Sarkar Mitra. How can I assist you today?" }]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize Captcha
   const generateCaptcha = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "";
@@ -146,200 +132,208 @@ export default function SarkarSevaApp() {
   };
 
   useEffect(() => { generateCaptcha(); }, []);
+  useEffect(() => { setMessages([{ role: "agent", text: t.welcome }]); }, [globalLang]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // Auto-scroll chat
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isChatOpen]);
-
-  // Orchestration Timer
-  useEffect(() => {
-    if (step === 5) {
-      const interval = setInterval(() => {
-        setOrchestrationProgress((prev) => {
-          if (prev >= 6) {
-            clearInterval(interval);
-            setTxId(`GV-${Math.floor(10000 + Math.random() * 90000)}`);
-            setTimeout(() => setStep(6), 1000);
-            return 6;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [step]);
-
-  // Handlers
-  const handleSendOtp = (e: React.FormEvent) => {
+  // Auth Functions
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
-    if (captchaInput.toUpperCase() !== captchaCode) {
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
       setAuthError("Incorrect CAPTCHA. Please try again.");
       generateCaptcha();
       return;
     }
+    
     setAuthLoading(true);
-    setTimeout(() => {
-      setOtpSent(true);
+
+    try {
+      /* 
+        =========================================
+        PINGRAM.IO INTEGRATION CODE (LIVE PROD)
+        =========================================
+        Uncomment the fetch block below and insert your Pingram API Key to send real emails.
+      */
+      
+      if (authMode === 'email' || loginTab === 'official') {
+        /*
+        const response = await fetch("https://api.pingram.io/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer YOUR_PINGRAM_SECRET_KEY" 
+          },
+          body: JSON.stringify({
+            to: contact,
+            type: "otp_verification", 
+            variables: { 
+              otp_code: "123456", 
+              user_name: "Citizen" 
+            }
+          })
+        });
+
+        if (!response.ok) throw new Error("Failed to send OTP via Pingram.");
+        */
+      }
+
+      // Simulated delay for UI demonstration
+      setTimeout(() => {
+        setOtpSent(true);
+        setAuthLoading(false);
+      }, 1200);
+
+    } catch (err: any) {
+      setAuthError(err.message || "An error occurred.");
+      generateCaptcha();
       setAuthLoading(false);
-    }, 1200);
+    }
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setTimeout(() => {
+      setUserRole(loginTab);
+      setCurrentView(loginTab === "official" ? "admin" : "services");
+      setStep(2); 
       setAuthLoading(false);
-      setStep(loginRole === "citizen" ? 2 : 10); // 2 = Citizen Dash, 10 = Dept Dash
+    }, 1000);
+  };
+
+  // Workflow Functions
+  const startWorkflow = (scheme: string) => {
+    setActiveScheme(scheme);
+    setSearchQuery("");
+    setShowSuggestions(false);
+    setWorkflowStep(1); 
+  };
+
+  const startOrchestration = () => {
+    setWorkflowStep(4);
+    setTxId(`GV-${Math.floor(10000 + Math.random() * 90000)}`);
+    setOrchestrationProgress(0);
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress++;
+      setOrchestrationProgress(progress);
+      if (progress >= 6) {
+        clearInterval(interval);
+        setTimeout(() => setWorkflowStep(5), 1200); 
+      }
     }, 1200);
   };
 
-  const handleServiceSelect = (service: string) => {
-    setServiceContext(service);
-    setSearchQuery("");
-    setShowSuggestions(false);
-    setStep(3); // Go to Request Review
-  };
-
-  const handleChatSubmit = (e: React.FormEvent) => {
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
+    
     setMessages(prev => [...prev, { role: "user", text: chatInput }]);
     setChatInput("");
     setChatLoading(true);
+
     setTimeout(() => {
-      setMessages(prev => [...prev, { role: "agent", text: `I have received your query regarding government services. Please select a service from the dashboard to proceed securely.` }]);
+      let reply = `I have securely checked the departmental knowledge base. Can you provide more details?`;
+      if (chatInput.toLowerCase().includes("housing")) reply = "For the Housing Scheme, our agents will automatically cross-verify your Income Certificate and Land Records. You can start the application directly from the Home screen.";
+      setMessages(prev => [...prev, { role: "agent", text: reply }]);
       setChatLoading(false);
     }, 1500);
   };
 
-  // --- COMPONENT: LANGUAGE SELECTOR ---
-  const LangSelector = () => (
-    <div className="flex items-center gap-2 bg-slate-100/50 hover:bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 transition-colors">
-      <Globe className="w-4 h-4 text-blue-600" />
-      <select value={lang} onChange={(e) => setLang(e.target.value)} className="bg-transparent text-sm font-semibold text-slate-700 outline-none cursor-pointer">
-        <option>English</option><option>Hindi</option><option>Marathi</option><option>Kannada</option>
-      </select>
-    </div>
-  );
+  const simulateVoice = () => {
+    setIsRecording(!isRecording);
+    if (!isRecording) {
+      setTimeout(() => {
+        setIsRecording(false);
+        setChatInput("Check my housing scheme eligibility");
+      }, 2500);
+    }
+  };
 
-  // --- COMPONENT: AI CHAT WIDGET ---
-  const ChatWidget = () => (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-      {isChatOpen && (
-        <div className="bg-white w-[350px] h-[500px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-10">
-          <div className="bg-[#0A1128] p-4 flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg border border-blue-400/30">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm">{t.aiAssistant}</h3>
-                <span className="text-[10px] text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> Online</span>
-              </div>
-            </div>
-            <button onClick={() => setIsChatOpen(false)} className="text-slate-300 hover:text-white"><X className="w-5 h-5"/></button>
-          </div>
-          <div className="flex-1 bg-slate-50 p-4 overflow-y-auto space-y-4">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${m.role === "user" ? "bg-blue-600 text-white rounded-br-none" : "bg-white border border-slate-200 text-slate-700 rounded-bl-none"}`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-slate-200 p-3 rounded-2xl rounded-bl-none flex gap-1 items-center">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div className="p-3 bg-white border-t border-slate-200">
-            <form onSubmit={handleChatSubmit} className="flex items-center gap-2">
-              <button type="button" className="text-slate-400 hover:text-blue-600"><Paperclip className="w-5 h-5"/></button>
-              <input type="text" value={chatInput} onChange={e=>setChatInput(e.target.value)} placeholder={t.askAi} className="flex-1 bg-slate-100 rounded-full px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600" />
-              <button type="button" className="text-slate-400 hover:text-blue-600"><Mic className="w-5 h-5"/></button>
-              <button type="submit" disabled={!chatInput.trim()} className="bg-[#0A1128] text-white p-2 rounded-full disabled:opacity-50"><Send className="w-4 h-4"/></button>
-            </form>
-          </div>
-        </div>
-      )}
-      {!isChatOpen && step > 1 && (
-        <button onClick={() => setIsChatOpen(true)} className="bg-[#0A1128] hover:bg-blue-900 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-105 border-2 border-blue-500/20">
-          <MessageSquare className="w-6 h-6" />
-        </button>
-      )}
-    </div>
-  );
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMessages(prev => [...prev, { role: "user", text: `[Document Uploaded: ${file.name}]` }]);
+    setChatLoading(true);
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: "agent", text: "Document received and passed to the OCR Agent. Data has been securely extracted and masked." }]);
+      setChatLoading(false);
+    }, 2000);
+  };
 
-  // --- SCREEN 0: LANDING PAGE ---
+  const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // ---------------------------------------------------------
+  // SCREEN 0: LANDING PAGE (Exact Video Replica)
+  // ---------------------------------------------------------
   if (step === 0) {
     return (
-      <div className="min-h-screen bg-[#fafafa] text-slate-900 font-sans flex flex-col relative">
-        <div className="w-full bg-[#FF9933] h-1" />
+      <div className="min-h-screen bg-[#fafafa] text-slate-900 font-sans flex flex-col">
         <header className="flex justify-between items-center p-8 max-w-7xl mx-auto w-full">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md">
               <Layers className="text-white w-5 h-5"/>
             </div>
-            <div>
-              <span className="font-bold text-xl tracking-tight block leading-none">{t.brandName}</span>
-              <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{t.govLabel}</span>
-            </div>
+            <span className="font-bold text-xl tracking-tight">Sarkar Seva</span>
           </div>
-          <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600 items-center">
-            <a href="#" className="text-blue-600">{t.home}</a>
-            <a href="#">{t.about}</a>
-            <a href="#">{t.works}</a>
-            <LangSelector />
+          <nav className="hidden md:flex gap-8 text-sm font-medium text-slate-600">
+            <button className="text-blue-600 font-semibold hover:text-blue-700">Home</button>
+            <button className="hover:text-slate-900">About</button>
+            <button className="hover:text-slate-900">How it Works</button>
           </nav>
-          <button onClick={() => setStep(1)} className="bg-slate-900 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-slate-800 transition-colors">
-            {t.getStarted}
+          <button onClick={() => setStep(1)} className="bg-slate-900 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-slate-800 transition-colors shadow-lg">
+            Get Started
           </button>
         </header>
 
-        <main className="flex-1 flex items-center justify-between max-w-7xl mx-auto w-full px-8">
-          <div className="max-w-xl space-y-6 z-10">
-            <h1 className="text-6xl font-serif text-slate-900 leading-tight">
-              {t.heroTitle} <br />
-              <span className="italic text-blue-600 font-semibold">{t.heroHighlight}</span>
-            </h1>
+        <main className="flex-1 flex items-center justify-between max-w-7xl mx-auto w-full px-8 pb-20">
+          <div className="max-w-xl space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-6xl font-serif text-slate-900 leading-[1.1]">
+                Government services <br />
+                <span className="italic text-slate-900">connected.</span>
+              </h1>
+            </div>
             <p className="text-lg text-slate-600 max-w-md">
-              {t.heroSub}
+              One request. Multiple departments.<br/>One coordinated journey.
             </p>
-            <div className="flex items-center gap-4 pt-4">
-              <button onClick={() => setStep(1)} className="bg-slate-900 text-white px-6 py-3 rounded-full font-medium flex items-center gap-2 hover:bg-slate-800 transition-all shadow-lg">
-                {t.startReq} <ArrowRight className="w-4 h-4"/>
+            <div className="flex items-center gap-6 pt-4">
+              <button onClick={() => setStep(1)} className="bg-slate-900 text-white px-6 py-3.5 rounded-full font-medium flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20">
+                Start a request <ArrowRight className="w-4 h-4"/>
               </button>
-              <button className="flex items-center gap-2 text-slate-600 font-medium hover:text-slate-900">
-                <CheckCircle2 className="w-5 h-5 text-slate-400"/> {t.watchHow}
+              <button className="flex items-center gap-2 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+                <CheckCircle2 className="w-5 h-5 text-slate-300"/> Watch how it works
               </button>
+            </div>
+            <div className="pt-16 text-slate-400/80 italic font-serif text-xl leading-relaxed">
+              Same you.<br/>Better process.<br/>Faster services.
             </div>
           </div>
           
+          {/* Animated Graph Diagram */}
           <div className="hidden lg:flex relative w-[500px] h-[500px] items-center justify-center">
             <div className="absolute w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center z-10 shadow-2xl shadow-blue-500/30">
               <Layers className="text-white w-10 h-10"/>
-              <span className="absolute -bottom-8 font-bold text-slate-900">{t.brandName}</span>
+              <span className="absolute -bottom-10 font-bold text-slate-900">Sarkar Seva</span>
             </div>
-            <div className="absolute top-10 w-16 h-16 bg-white border border-blue-100 shadow-xl rounded-full flex items-center justify-center -translate-y-12 animate-[bounce_3s_infinite]">
+            <div className="absolute top-10 w-16 h-16 bg-white border border-slate-100 shadow-xl rounded-full flex items-center justify-center -translate-y-12 transition-transform hover:scale-110">
               <User className="text-blue-500 w-6 h-6"/>
-              <span className="absolute -top-6 text-sm font-bold text-blue-600">Identity</span>
+              <span className="absolute -top-7 text-sm font-bold text-blue-600">Identity</span>
             </div>
-            <div className="absolute left-10 w-16 h-16 bg-white border border-yellow-100 shadow-xl rounded-full flex items-center justify-center -translate-x-12 animate-[bounce_3.5s_infinite]">
+            <div className="absolute left-10 w-16 h-16 bg-white border border-slate-100 shadow-xl rounded-full flex items-center justify-center -translate-x-12 transition-transform hover:scale-110">
               <FileText className="text-yellow-500 w-6 h-6"/>
               <span className="absolute -left-16 text-sm font-bold text-yellow-600">Income</span>
             </div>
-            <div className="absolute right-10 w-16 h-16 bg-white border border-green-100 shadow-xl rounded-full flex items-center justify-center translate-x-12 animate-[bounce_4s_infinite]">
+            <div className="absolute right-10 w-16 h-16 bg-white border border-slate-100 shadow-xl rounded-full flex items-center justify-center translate-x-12 transition-transform hover:scale-110">
               <Building className="text-green-500 w-6 h-6"/>
-              <span className="absolute -right-16 text-sm font-bold text-green-600">Revenue</span>
+              <span className="absolute -right-20 text-sm font-bold text-green-600">Revenue</span>
             </div>
             <svg className="absolute inset-0 w-full h-full -z-10" viewBox="0 0 500 500">
-              <circle cx="250" cy="250" r="140" fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6 6" className="animate-[spin_20s_linear_infinite] origin-center" />
+              <circle cx="250" cy="250" r="140" fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="6 6" className="animate-[spin_60s_linear_infinite]" />
+              <path d="M 250 250 L 250 80" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="4 4" />
+              <path d="M 250 250 L 110 250" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="4 4" />
+              <path d="M 250 250 L 390 250" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="4 4" />
             </svg>
           </div>
         </main>
@@ -347,121 +341,115 @@ export default function SarkarSevaApp() {
     );
   }
 
-  // --- SCREEN 1: SIGN IN ---
+  // ---------------------------------------------------------
+  // SCREEN 1: SIGN IN (Exact Video Replica)
+  // ---------------------------------------------------------
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 relative">
-        <div className="absolute top-8 right-8"><LangSelector /></div>
-        <div className="bg-white rounded-3xl w-full max-w-5xl flex overflow-hidden shadow-2xl h-[650px]">
-          {/* Left Illustration */}
-          <div className="w-1/2 bg-[#B5C2DF] p-12 flex flex-col justify-between relative overflow-hidden hidden md:flex">
-            <div className="z-10 text-[#2F3A56]">
-              <h2 className="text-2xl font-serif italic mb-1">{t.mumbai}</h2>
-              <h1 className="text-4xl font-bold">{t.gateway}</h1>
-              <p className="mt-4 font-semibold text-sm opacity-80">{t.govLabel}</p>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
+        <div className="bg-white rounded-3xl w-full max-w-5xl flex overflow-hidden shadow-2xl h-[600px]">
+          
+          <div className="w-1/2 bg-[#B5C2DF] p-12 flex flex-col justify-between relative overflow-hidden">
+            <button onClick={() => setStep(0)} className="absolute top-6 left-6 text-[#2F3A56]/60 hover:text-[#2F3A56] text-sm font-bold z-20 transition-colors">← Back</button>
+            <div className="z-10 text-[#2F3A56] mt-8">
+              <h2 className="text-2xl font-serif italic mb-1">Mumbai</h2>
+              <h1 className="text-4xl font-bold">Gateway of India</h1>
             </div>
+            {/* Gateway of India CSS Art */}
             <div className="absolute bottom-0 left-0 w-full h-64 bg-[#a0b0d4] z-0 flex items-end justify-center pb-8">
-                <div className="w-48 h-48 border-8 border-[#8b9bc2] rounded-t-[100px] border-b-0 flex items-end justify-center">
+                <div className="w-48 h-48 border-8 border-[#8b9bc2] rounded-t-[100px] border-b-0 flex items-end justify-center relative">
                     <div className="w-32 h-32 border-8 border-[#8b9bc2] rounded-t-[80px] border-b-0"></div>
+                    <div className="absolute -left-16 bottom-10 text-white"><svg width="40" height="20" viewBox="0 0 40 20"><path d="M0,10 Q10,0 20,10 T40,10 L30,20 L10,20 Z" fill="white"/></svg></div>
                 </div>
             </div>
           </div>
           
-          {/* Right Form */}
-          <div className="w-full md:w-1/2 p-12 md:p-16 flex flex-col justify-center bg-white">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                  <Layers className="text-white w-3 h-3"/>
-                </div>
-                <span className="font-bold text-sm tracking-tight text-slate-800">{t.brandName}</span>
+          <div className="w-1/2 p-16 flex flex-col justify-center bg-white relative">
+            <div className="flex items-center gap-2 mb-8">
+              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                <Layers className="text-white w-3 h-3"/>
               </div>
+              <span className="font-bold text-sm tracking-tight text-slate-800">Sarkar Seva</span>
             </div>
 
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">{t.welcome}</h2>
-            <p className="text-slate-500 mb-8 text-sm">{t.loginSub}</p>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome back!</h2>
+            <p className="text-slate-500 mb-8 text-sm">Log in to continue to Sarkar Seva.</p>
 
-            {/* Role Toggle */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-              <button onClick={() => { setLoginRole("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginRole === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
-                <Users className="w-4 h-4"/> {t.citizen}
+            {/* Role / Auth Type Toggles */}
+            <div className="flex bg-slate-50 p-1 rounded-xl mb-6 border border-slate-100">
+              <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"}`}>
+                <User className="w-4 h-4"/> Citizen
               </button>
-              <button onClick={() => { setLoginRole("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginRole === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
-                <Building className="w-4 h-4"/> {t.official}
+              <button onClick={() => { setLoginTab("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-slate-900 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"}`}>
+                <Building className="w-4 h-4"/> Department
               </button>
             </div>
 
-            {authError && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2 border border-red-100">
-                <AlertTriangle className="w-4 h-4 shrink-0"/> {authError}
+            {loginTab === "citizen" && !otpSent && (
+              <div className="flex border-b border-slate-200 mb-6">
+                <button onClick={() => setAuthMode('mobile')} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMode === 'mobile' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Mobile</button>
+                <button onClick={() => setAuthMode('email')} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMode === 'email' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Email</button>
+                <button onClick={() => setAuthMode('aadhaar')} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMode === 'aadhaar' ? 'border-b-2 border-slate-900 text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}>Aadhaar</button>
               </div>
             )}
 
-            {!otpSent ? (
-              <form onSubmit={handleSendOtp} className="space-y-5">
-                {/* Auth Method Tabs */}
-                {loginRole === "citizen" && (
-                  <div className="flex border-b border-slate-200 mb-4">
-                    <button type="button" onClick={() => setAuthMethod("mobile")} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMethod === "mobile" ? "text-slate-900 border-b-2 border-slate-900" : "text-slate-400 hover:text-slate-600"}`}>{t.mobile}</button>
-                    <button type="button" onClick={() => setAuthMethod("email")} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMethod === "email" ? "text-slate-900 border-b-2 border-slate-900" : "text-slate-400 hover:text-slate-600"}`}>{t.email}</button>
-                    <button type="button" onClick={() => setAuthMethod("aadhaar")} className={`flex-1 pb-3 text-sm font-bold transition-all ${authMethod === "aadhaar" ? "text-slate-900 border-b-2 border-slate-900" : "text-slate-400 hover:text-slate-600"}`}>{t.aadhaar}</button>
-                  </div>
-                )}
+            {authError && <div className="p-3 mb-4 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2 border border-red-200"><AlertTriangle className="w-4 h-4"/>{authError}</div>}
 
-                {/* Input Field based on method */}
-                <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-600 transition-all">
-                  <div className="px-4 py-3.5 bg-slate-100 border-r border-slate-200 text-slate-600 font-medium text-sm flex items-center">
-                    {loginRole === "official" ? <UserCircle className="w-4 h-4"/> : authMethod === "mobile" ? "+91" : authMethod === "email" ? "@" : <FileDigit className="w-4 h-4"/>}
-                  </div>
+            {!otpSent ? (
+              <form onSubmit={handleSendOtp} className="space-y-4">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 transition-all">
+                  {authMode === 'mobile' && loginTab === 'citizen' && (
+                    <div className="px-4 py-3.5 bg-slate-100 border-r border-slate-200 text-slate-500 font-medium text-sm flex items-center">+91</div>
+                  )}
                   <input 
-                    type={authMethod === "email" || loginRole === "official" ? "email" : "text"} 
-                    required
-                    placeholder={
-                      loginRole === "official" ? "official@maharashtra.gov.in" :
-                      authMethod === "mobile" ? "Enter your mobile number" :
-                      authMethod === "email" ? "Enter your email address" :
-                      "Enter Virtual ID or [Aadhaar Redacted]"
-                    }
-                    value={contact}
-                    onChange={e => setContact(e.target.value)}
-                    className="flex-1 px-4 py-3.5 bg-transparent outline-none text-slate-900 text-sm placeholder:text-slate-400"
+                    type={authMode === 'email' || loginTab === 'official' ? 'email' : 'text'}
+                    required 
+                    placeholder={loginTab === 'official' ? 'officer@maharashtra.gov.in' : authMode === 'email' ? 'citizen@example.com' : authMode === 'aadhaar' ? '12-Digit Identity Number' : 'Enter your mobile number'}
+                    value={contact} 
+                    onChange={e => setContact(e.target.value)} 
+                    className="flex-1 px-4 py-3.5 bg-transparent outline-none text-slate-900 text-sm placeholder:text-slate-400" 
                   />
                 </div>
 
-                {/* Captcha */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">{t.captcha}</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-mono text-xl font-bold tracking-[0.3em] text-slate-700 relative overflow-hidden select-none">
-                      <span className="line-through decoration-slate-400 decoration-2 italic">{captchaCode}</span>
-                    </div>
-                    <button type="button" onClick={generateCaptcha} className="p-3.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-colors" title={t.refresh}>
-                      <RefreshCw className="w-5 h-5"/>
-                    </button>
+                {/* Dynamic Captcha */}
+                <div className="flex gap-3">
+                  <div className="w-1/3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center relative overflow-hidden group">
+                    <span className="font-mono text-lg font-bold text-slate-700 tracking-widest line-through decoration-slate-400/70 italic select-none">{captchaCode}</span>
+                    <button type="button" onClick={generateCaptcha} className="absolute inset-0 bg-slate-900/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><RefreshCw className="w-4 h-4 text-slate-700"/></button>
                   </div>
-                  <input type="text" required maxLength={5} placeholder="Enter 5 characters" value={captchaInput} onChange={e => setCaptchaInput(e.target.value)} className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-600 font-mono uppercase tracking-widest text-sm" />
+                  <input type="text" required maxLength={5} placeholder="Enter CAPTCHA" value={captchaInput} onChange={e => setCaptchaInput(e.target.value)} className="w-2/3 px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm outline-none focus:ring-2 focus:ring-slate-900 transition-all uppercase" />
                 </div>
-                
-                <button disabled={authLoading} className={`w-full text-white py-4 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-70 ${loginRole === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                  {authLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : <>{t.sendOtp} <ArrowRight className="w-4 h-4"/></>}
+
+                <button disabled={authLoading} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors mt-2 flex justify-center items-center gap-2 shadow-lg">
+                  {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4"/></>}
                 </button>
+
+                {loginTab === 'citizen' && (
+                  <>
+                    <div className="flex items-center gap-4 py-2">
+                      <div className="h-px bg-slate-100 flex-1"></div>
+                      <span className="text-xs text-slate-400 font-medium">or</span>
+                      <div className="h-px bg-slate-100 flex-1"></div>
+                    </div>
+                    <button type="button" className="w-full bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+                      <Globe className="w-4 h-4 text-blue-500"/> Continue with Google
+                    </button>
+                  </>
+                )}
               </form>
             ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-6 animate-in slide-in-from-right-4">
-                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 text-center">
-                  Secure OTP sent to <strong className="break-all">{contact}</strong>
+              <form onSubmit={handleVerifyOtp} className="space-y-6">
+                <div className="text-sm text-slate-600 text-center px-4">
+                  We sent a secure code to <span className="font-bold text-slate-900">{contact}</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{t.enterOtp}</label>
-                  <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-4 border border-slate-200 rounded-xl text-center text-2xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none" />
-                </div>
-                <button disabled={authLoading} className={`w-full text-white py-4 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-70 ${loginRole === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                  {authLoading ? <Loader2 className="w-4 h-4 animate-spin"/> : t.verify}
+                <input type="text" maxLength={6} required placeholder="· · · · · ·" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-3xl tracking-[0.5em] font-mono text-slate-900 focus:ring-2 focus:ring-slate-900 outline-none transition-all" />
+                <button disabled={authLoading} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center gap-2">
+                  {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Log in"}
                 </button>
               </form>
             )}
-
-            <p className="text-center text-xs text-slate-400 mt-8 flex items-center justify-center gap-1">
+            
+            <p className="text-center text-[11px] text-slate-400 mt-8 flex items-center justify-center gap-1">
               <Shield className="w-3 h-3"/> Secure & trusted. Your data is safe with us.
             </p>
           </div>
@@ -470,444 +458,584 @@ export default function SarkarSevaApp() {
     );
   }
 
-  // --- SCREEN 2: CITIZEN DASHBOARD ---
-  if (step === 2) {
-    const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return (
-      <div className="min-h-screen bg-slate-50 flex relative">
-        <ChatWidget />
-        <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col h-screen sticky top-0 hidden md:flex">
-          <div className="flex items-center gap-2 mb-12">
+  // ---------------------------------------------------------
+  // MAIN APP SHELL (Sidebar, Header, Main Content)
+  // ---------------------------------------------------------
+  return (
+    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+      
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex sticky top-0 h-screen shrink-0">
+        <div className="p-6 mb-4">
+          <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
               <Layers className="text-white w-3 h-3"/>
             </div>
-            <span className="font-bold tracking-tight text-slate-800">{t.brandName}</span>
+            <span className="font-bold tracking-tight text-slate-800">Sarkar Seva</span>
           </div>
-          <nav className="flex-1 space-y-2">
-            <button className="w-full flex items-center gap-3 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl font-semibold text-sm">
-              <Home className="w-5 h-5"/> {t.home}
-            </button>
-            <button className="w-full flex items-center gap-3 text-slate-500 hover:bg-slate-50 px-4 py-3 rounded-xl font-medium text-sm transition-colors">
-              <List className="w-5 h-5"/> My Requests
-            </button>
-            <button className="w-full flex items-center gap-3 text-slate-500 hover:bg-slate-50 px-4 py-3 rounded-xl font-medium text-sm transition-colors">
-              <User className="w-5 h-5"/> Profile
-            </button>
-          </nav>
-          <div className="space-y-2 mt-auto border-t border-slate-100 pt-4">
-            <button className="w-full flex items-center gap-3 text-slate-500 hover:bg-slate-50 px-4 py-3 rounded-xl font-medium text-sm transition-colors">
-              <HelpCircle className="w-5 h-5"/> Help
-            </button>
-            <div className="flex items-center justify-between px-4 py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs">U</div>
-                <div className="text-sm font-semibold text-slate-700">User</div>
-              </div>
-              <button onClick={() => setStep(0)} className="text-slate-400 hover:text-red-500"><LogOut className="w-4 h-4"/></button>
-            </div>
-          </div>
-        </aside>
+        </div>
 
-        <main className="flex-1 p-8 md:p-12 max-w-5xl">
-          <div className="flex justify-between items-start mb-12">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">{t.goodMorning} ☀️</h1>
-              <p className="text-slate-500">Let's get your Government work done, together.</p>
-            </div>
-            <div className="text-right hidden sm:block">
-              <span className="font-serif italic text-blue-600 text-xl block">{t.reqMatters}</span>
-              <LangSelector />
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12 relative z-20">
-            <h2 className="text-sm font-bold text-slate-900 mb-4">{t.whatNeed}</h2>
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 text-slate-400 w-5 h-5" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => {setSearchQuery(e.target.value); setShowSuggestions(true);}}
-                onFocus={() => setShowSuggestions(true)}
-                placeholder={t.searchPlace}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-14 py-4 outline-none text-slate-900 focus:ring-2 focus:ring-blue-600 transition-all text-lg"
-              />
-              <button className="absolute right-2 bg-slate-900 text-white p-3 rounded-lg hover:bg-slate-800 transition-colors">
-                <ArrowRight className="w-5 h-5"/>
+        <nav className="flex-1 px-4 space-y-1">
+          {userRole === "citizen" && (
+            <>
+              <button onClick={() => {setCurrentView("services"); setWorkflowStep(0);}} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${currentView === "services" ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>
+                <Home className="w-4 h-4"/> {t.citizenServices}
               </button>
-              
-              {/* Autocomplete Dropdown */}
-              {showSuggestions && searchQuery && filteredServices.length > 0 && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in">
-                  {filteredServices.map(s => (
-                    <button key={s} onClick={() => handleServiceSelect(s)} className="w-full text-left px-6 py-4 text-slate-700 hover:bg-slate-50 hover:text-blue-600 border-b border-slate-100 last:border-0 font-medium transition-colors flex items-center gap-3">
-                      <Search className="w-4 h-4 text-slate-400" /> {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                <FileText className="w-4 h-4"/> New Request
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                <List className="w-4 h-4"/> My Requests
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                <User className="w-4 h-4"/> Profile
+              </button>
+            </>
+          )}
+          {userRole === "official" && (
+            <button onClick={() => setCurrentView("admin")} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${currentView === "admin" ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>
+              <LayoutDashboard className="w-4 h-4"/> {t.deptDashboard}
+            </button>
+          )}
+        </nav>
 
-          <div className="relative z-10">
-            <h3 className="text-sm font-bold text-slate-900 mb-4">{t.popServices}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { icon: Home, label: "Housing Scheme", color: "text-blue-600", bg: "bg-blue-50" },
-                { icon: FileText, label: "Income Certificate", color: "text-yellow-600", bg: "bg-yellow-50" },
-                { icon: Building, label: "Property Records", color: "text-green-600", bg: "bg-green-50" },
-                { icon: Layers, label: "Other Services", color: "text-purple-600", bg: "bg-purple-50" },
-              ].map((service, idx) => (
-                <button key={idx} onClick={() => handleServiceSelect(service.label)} className="bg-white p-6 rounded-2xl border border-slate-200 hover:shadow-md hover:border-blue-200 transition-all text-center flex flex-col items-center gap-3 group">
-                  <div className={`w-12 h-12 rounded-full ${service.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <service.icon className={`w-6 h-6 ${service.color}`} />
-                  </div>
-                  <span className="font-semibold text-sm text-slate-700">{service.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // --- SCREEN 3: ORCHESTRATION / CONSENT ---
-  if (step === 3 || step === 4) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <ChatWidget />
-        <div className="bg-white rounded-3xl w-full max-w-4xl min-h-[600px] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-          <button onClick={() => setStep(step - 1)} className="absolute top-8 left-8 text-slate-400 hover:text-slate-900 flex items-center gap-2 text-sm font-semibold z-20">
-             ← Back
+        <div className="p-4 space-y-2">
+          <button className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+            <HelpCircle className="w-4 h-4"/> Help
           </button>
-          
-          {step === 3 ? (
-            <div className="max-w-2xl mx-auto mt-12 animate-in fade-in slide-in-from-bottom-4">
-              <h2 className="text-4xl font-serif text-center text-slate-900 mb-12 italic">We understood your request! ✨</h2>
-              
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-12 flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
-                  <Home className="w-6 h-6"/>
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900">{serviceContext}</h3>
-                  <p className="text-slate-500 text-sm">We'll check information from multiple departments securely.</p>
-                </div>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-2 px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-xs">
+                {userRole === 'official' ? 'GO' : 'MC'}
               </div>
-
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-4">Systems that will be involved</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-                  <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm">
-                    <User className="w-5 h-5 text-blue-500"/>
-                    <span className="text-sm font-semibold text-slate-700">Identity Dept</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm">
-                    <FileText className="w-5 h-5 text-yellow-500"/>
-                    <span className="text-sm font-semibold text-slate-700">Income Dept</span>
-                  </div>
-                  <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center justify-center gap-2 shadow-sm">
-                    <Building className="w-5 h-5 text-green-500"/>
-                    <span className="text-sm font-semibold text-slate-700">Revenue Dept</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <button onClick={() => setStep(4)} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md">
-                  Continue →
-                </button>
-              </div>
+              <div className="text-sm font-bold text-slate-700">{userRole === 'official' ? 'Govt Officer' : 'Manya'}</div>
             </div>
-          ) : (
-            <div className="max-w-2xl mx-auto mt-12 animate-in fade-in slide-in-from-right-8">
-               <h2 className="text-3xl font-bold text-slate-900 mb-2">You're in control</h2>
-               <p className="text-slate-500 text-sm mb-8 leading-relaxed">Sarkar Seva asks permission for each department and detail it will access. Data is used strictly for this request. Your data. Your control.</p>
-               
-               <div className="space-y-4 mb-12">
-                 {[
-                   { name: "Identity Department", details: "Name, [Aadhaar Redacted], Profile", icon: User, color: "text-blue-500" },
-                   { name: "Income Department", details: "Generic Income, Tax Details", icon: FileText, color: "text-yellow-500" },
-                   { name: "Property Department", details: "Generic Property records", icon: Building, color: "text-green-500" }
-                 ].map((dept, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-slate-50 shadow-sm">
-                     <div className="flex items-center gap-4">
-                       <div className={`p-2 bg-white rounded-full shadow-sm border border-slate-100 ${dept.color}`}>
-                          <dept.icon className="w-4 h-4" />
-                       </div>
-                       <div>
-                         <h4 className="font-bold text-sm text-slate-900">{dept.name}</h4>
-                         <p className="text-xs text-slate-500 mt-0.5">{dept.details}</p>
-                       </div>
-                     </div>
-                     <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-                        <Check className="w-3 h-3 text-white"/>
-                     </div>
-                   </div>
-                 ))}
-               </div>
+            <button onClick={() => {setStep(0); setWorkflowStep(0);}} className="text-slate-400 hover:text-slate-700 transition-colors" title="Logout">
+              <LogOut className="w-4 h-4"/>
+            </button>
+          </div>
+        </div>
+      </aside>
 
-               <div className="flex items-center gap-4">
-                 <button onClick={() => { setOrchestrationProgress(0); setStep(5); }} className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md flex-1 md:flex-none">
-                   Allow access & Execute
-                 </button>
-                 <button onClick={() => setStep(3)} className="px-8 py-3.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors">
-                   Cancel
-                 </button>
-               </div>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* HEADER */}
+        {workflowStep === 0 && currentView === 'services' && (
+          <header className="flex justify-end p-6 shrink-0 absolute top-0 right-0 z-50">
+             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                <Globe className="w-4 h-4 text-slate-500" />
+                <select value={globalLang} onChange={(e) => setGlobalLang(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer">
+                  <option>English</option>
+                  <option>Hindi</option>
+                  <option>Marathi</option>
+                  <option>Kannada</option>
+                </select>
+             </div>
+          </header>
+        )}
+
+        <div className="flex-1 overflow-y-auto relative">
+          
+          {/* VIEW: CITIZEN PORTAL (Dashboard) */}
+          {currentView === "services" && workflowStep === 0 && (
+            <div className="p-12 max-w-5xl animate-in fade-in">
+              <div className="flex justify-between items-start mb-12 mt-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-900 mb-2">Good morning, Manya ☀️</h1>
+                  <p className="text-slate-500">Let's get your Government work done, together.</p>
+                </div>
+                <div className="text-right hidden md:block">
+                  <span className="font-serif italic text-blue-600 text-xl block leading-snug">Your request</span>
+                  <span className="font-serif italic text-blue-600 text-xl block leading-snug">matters</span>
+                </div>
+              </div>
+
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-12">
+                <h2 className="text-sm font-bold text-slate-900 mb-4">What do you need today?</h2>
+                <div className="relative flex items-center">
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => {setSearchQuery(e.target.value); setShowSuggestions(true);}}
+                    placeholder={t.searchPlaceholder}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 outline-none text-slate-900 focus:ring-2 focus:ring-blue-600 text-lg transition-all pr-16"
+                  />
+                  <button className="absolute right-2 bg-slate-900 text-white p-3 rounded-lg hover:bg-slate-800 transition-colors">
+                    <ArrowRight className="w-5 h-5"/>
+                  </button>
+                  
+                  {showSuggestions && searchQuery && (
+                    <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50">
+                      {filteredServices.length > 0 ? filteredServices.map(s => (
+                        <button key={s} onClick={() => startWorkflow(s)} className="w-full text-left px-6 py-3.5 hover:bg-slate-50 border-b border-slate-50 font-medium text-slate-700 last:border-0 transition-colors flex items-center gap-3">
+                           <Search className="w-4 h-4 text-slate-400"/> {s}
+                        </button>
+                      )) : (
+                        <div className="px-6 py-4 text-slate-500 text-sm">No services found matching your search.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-slate-900 mb-4">{t.popular}</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { icon: Home, label: "Housing Scheme", color: "text-blue-600", bg: "bg-blue-50" },
+                  { icon: FileText, label: "Income Certificate", color: "text-yellow-600", bg: "bg-yellow-50" },
+                  { icon: Building, label: "Property Records", color: "text-green-600", bg: "bg-green-50" },
+                  { icon: Layers, label: "Other Services", color: "text-purple-600", bg: "bg-purple-50" },
+                ].map((s, idx) => (
+                  <button key={idx} onClick={() => startWorkflow(s.label === 'Other Services' ? 'Senior Citizen Registration' : s.label)} className="bg-white p-6 rounded-2xl border border-slate-200 hover:shadow-md hover:border-slate-300 transition-all text-center flex flex-col items-center gap-3 group">
+                    <div className={`w-12 h-12 rounded-full ${s.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}><s.icon className={`w-6 h-6 ${s.color}`} /></div>
+                    <span className="font-semibold text-sm text-slate-700">{s.label}</span>
+                  </button>
+                ))}
+              </div>
+              
+              {/* FAB for AI Chat */}
+              <button onClick={() => setCurrentView("chat")} className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all hover:scale-105 flex items-center gap-2 group z-50">
+                <MessageSquare className="w-6 h-6" />
+                <span className="font-bold pr-2 overflow-hidden max-w-0 group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">Ask AI Mitra</span>
+              </button>
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
 
-  // --- SCREEN 4: AGENT ORCHESTRATION (LIVE) ---
-  if (step === 5) {
-    const agents = [
-      "Request Agent", "Routing Agent", "Data Agents", 
-      "Validation Agent", "Consent & Security Agent", "Response Agent"
-    ];
-
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
-        <ChatWidget />
-        <div className="w-full max-w-4xl relative bg-slate-900/50 backdrop-blur-sm p-8 rounded-3xl border border-slate-800">
-          <div className="flex justify-between items-center border-b border-slate-800 pb-6 mb-8">
-            <div>
-              <div className="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">Live Swarm Execution</div>
-              <h2 className="text-2xl font-bold">Agent Orchestration <span className="text-blue-400 text-sm font-normal ml-2 bg-blue-900/30 px-3 py-1 rounded-full border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]">Active</span></h2>
-            </div>
-            <div className="flex items-center gap-2 text-sm font-medium bg-slate-800 px-4 py-2 rounded-full border border-slate-700">
-               <Loader2 className="w-4 h-4 animate-spin text-blue-400"/> Processing...
-            </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="w-full md:w-1/2 space-y-6 relative">
-              <div className="absolute left-[11px] top-4 bottom-4 w-px bg-slate-800 -z-10"></div>
-              
-              {agents.map((agent, index) => {
-                const isActive = orchestrationProgress === index;
-                const isPast = orchestrationProgress > index;
+          {/* WORKFLOW: 1. Start a Request (Understood) */}
+          {currentView === "services" && workflowStep === 1 && (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 fixed inset-0 z-50">
+              <div className="bg-white rounded-3xl w-full max-w-4xl min-h-[500px] p-12 shadow-2xl relative animate-in fade-in zoom-in-95 duration-300">
+                <button onClick={() => setWorkflowStep(0)} className="absolute top-8 left-8 text-slate-400 hover:text-slate-900 text-sm font-bold flex items-center gap-2 transition-colors">← Back</button>
                 
-                return (
-                  <div key={index} className={`flex gap-4 ${isActive ? 'opacity-100' : isPast ? 'opacity-50' : 'opacity-30'} transition-opacity duration-500`}>
-                    <div className="mt-1 shrink-0">
-                      {isPast ? (
-                        <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-                          <Check className="w-3 h-3 text-white"/>
-                        </div>
-                      ) : isActive ? (
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center animate-pulse shadow-[0_0_20px_rgba(59,130,246,0.6)]">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 rounded-full border-2 border-slate-700 bg-slate-900"></div>
-                      )}
+                <div className="max-w-2xl mx-auto mt-12 text-center">
+                  <h2 className="text-4xl font-serif text-slate-900 mb-12 italic">We understood your request! ✨</h2>
+                  
+                  <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 mb-12 flex items-center gap-4 text-left">
+                    <div className="w-12 h-12 bg-blue-50 border border-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0">
+                      <Home className="w-6 h-6"/>
                     </div>
                     <div>
-                      <h4 className={`font-bold text-lg ${isActive ? 'text-white' : 'text-slate-300'}`}>
-                        {index + 1}. {agent}
-                      </h4>
-                      <p className="text-sm text-slate-500 mt-1">
-                        {index === 0 && "Understanding request intent & scope."}
-                        {index === 1 && "Mapping API paths to target departments."}
-                        {index === 2 && "Securely fetching encrypted ledgers."}
-                        {index === 3 && "Running consistency checks & rules."}
-                        {index === 4 && "Applying strict privacy masks."}
-                        {index === 5 && "Formatting deterministic output."}
-                      </p>
-
-                      {/* Network Graph Visual for Data Agent Step */}
-                      {index === 2 && (isActive || isPast) && (
-                        <div className="flex flex-wrap gap-3 mt-4">
-                           <div className={`text-xs px-3 py-1.5 rounded-md border flex items-center gap-1 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-blue-500/30 bg-blue-500/10 text-blue-400'}`}>
-                             <User className="w-3 h-3"/> Identity: {isPast ? 'Verified' : 'Fetching'}
-                           </div>
-                           <div className={`text-xs px-3 py-1.5 rounded-md border flex items-center gap-1 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'}`}>
-                             <FileText className="w-3 h-3"/> Income: {isPast ? 'Verified' : 'Fetching'}
-                           </div>
-                           <div className={`text-xs px-3 py-1.5 rounded-md border flex items-center gap-1 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 bg-slate-800 text-slate-400'}`}>
-                             <Building className="w-3 h-3"/> Property: {isPast ? 'Verified' : 'Queue'}
-                           </div>
-                        </div>
-                      )}
+                      <h3 className="font-bold text-lg text-slate-900">{activeScheme}</h3>
+                      <p className="text-slate-500 text-sm mt-0.5">We'll check information from multiple departments.</p>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-            
-            <div className="w-full md:w-1/2 flex items-center justify-center opacity-70 border-t md:border-t-0 md:border-l border-slate-800 pt-8 md:pt-0 md:pl-8">
-              <div className="font-serif italic text-4xl text-center leading-tight">
-                <span className="text-blue-400">Multiple agents.</span><br/>One goal.
+
+                  <div className="text-left">
+                    <h4 className="text-sm font-bold text-slate-900 mb-4">Systems that will be involved</h4>
+                    <div className="flex gap-4 mb-12">
+                      {[{icon: User, c: "text-blue-500", l: "Identity"}, {icon: FileText, c: "text-yellow-500", l: "Income"}, {icon: Building, c: "text-green-500", l: "Revenue"}].map((d, i) => (
+                        <div key={i} className="flex-1 bg-white border border-slate-200 p-4 rounded-xl flex flex-col items-center gap-2 shadow-sm">
+                          <d.icon className={`w-5 h-5 ${d.c}`}/>
+                          <span className="text-sm font-bold text-slate-700">{d.l} Dept</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button onClick={() => setWorkflowStep(2)} className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg flex items-center gap-2">
+                      Continue <ArrowRight className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* WORKFLOW: 2. Request Review */}
+          {currentView === "services" && workflowStep === 2 && (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 fixed inset-0 z-50">
+              <div className="bg-white rounded-3xl w-full max-w-4xl p-12 shadow-2xl relative animate-in slide-in-from-right-8 duration-300">
+                <button onClick={() => setWorkflowStep(1)} className="absolute top-8 left-8 text-slate-400 hover:text-slate-900 text-sm font-bold flex items-center gap-2 transition-colors">← Back</button>
+                
+                <div className="max-w-3xl mx-auto mt-8">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Review your request</h2>
+                  <p className="text-slate-500 text-sm mb-8">Please check the details before we proceed.</p>
+
+                  <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 mb-8 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center shrink-0">
+                      <Home className="w-5 h-5"/>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900">{activeScheme}</h3>
+                      <p className="text-slate-400 text-xs mt-0.5 font-mono">Request ID: PENDING</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Information Required</h4>
+                      <div className="space-y-4">
+                         <div className="flex items-start gap-3">
+                           <User className="w-4 h-4 text-slate-400 mt-0.5"/>
+                           <div><div className="font-bold text-sm text-slate-800">Identity</div><div className="text-xs text-slate-500">Name, Verified profile</div></div>
+                         </div>
+                         <div className="flex items-start gap-3">
+                           <FileText className="w-4 h-4 text-slate-400 mt-0.5"/>
+                           <div><div className="font-bold text-sm text-slate-800">Income</div><div className="text-xs text-slate-500">Annual income details</div></div>
+                         </div>
+                         <div className="flex items-start gap-3">
+                           <Building className="w-4 h-4 text-slate-400 mt-0.5"/>
+                           <div><div className="font-bold text-sm text-slate-800">Property</div><div className="text-xs text-slate-500">Existing property records</div></div>
+                         </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 mb-4 border-b border-slate-100 pb-2">Purpose</h4>
+                      <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        Determining scheme eligibility based on your verified information directly from government systems.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center border-t border-slate-100 pt-6">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex gap-4">
+                      <span>3 Departments</span>
+                      <span>•</span>
+                      <span>2 Data Points</span>
+                      <span>•</span>
+                      <span>1 Request</span>
+                    </div>
+                    <button onClick={() => setWorkflowStep(3)} className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg flex items-center gap-2">
+                      Continue <ArrowRight className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* WORKFLOW: 3. Consent / Authorization */}
+          {currentView === "services" && workflowStep === 3 && (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 fixed inset-0 z-50">
+              <div className="bg-white rounded-3xl w-full max-w-4xl p-12 shadow-2xl animate-in slide-in-from-right-8 duration-300 flex overflow-hidden">
+                
+                <div className="w-1/2 pr-8 border-r border-slate-100 flex flex-col justify-center">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-2">You're in control</h2>
+                  <p className="text-slate-500 text-sm mb-8 leading-relaxed">
+                    Sarkar Seva asks permission for each department and each detail it will access — data is used only for this request and access can be revoked anytime.
+                  </p>
+                  
+                  <div className="space-y-3 mb-10">
+                    {[
+                      { name: "Identity Department", details: "Name, Verified Profile", icon: User, color: "text-blue-500" },
+                      { name: "Income Department", details: "Generic Income, Tax Details", icon: FileText, color: "text-yellow-500" },
+                      { name: "Property Department", details: "Generic Property records", icon: Building, color: "text-green-500" }
+                    ].map((dept, i) => (
+                      <div key={i} className="flex items-center justify-between p-3.5 border border-slate-200 rounded-xl bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 ${dept.color}`}><dept.icon className="w-4 h-4" /></div>
+                          <div>
+                            <h4 className="font-bold text-sm text-slate-900">{dept.name}</h4>
+                            <p className="text-[11px] text-slate-500">{dept.details}</p>
+                          </div>
+                        </div>
+                        <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-sm"><Check className="w-3 h-3 text-white"/></div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button onClick={startOrchestration} className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 shadow-lg transition-colors">
+                      Allow access
+                    </button>
+                    <button onClick={() => setWorkflowStep(2)} className="px-6 py-3.5 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-1/2 pl-12 flex flex-col items-center justify-center text-center">
+                   <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center border border-blue-100 mb-6 shadow-inner relative">
+                      <Shield className="w-10 h-10 text-blue-600"/>
+                      <div className="absolute -right-2 -top-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center"><Check className="w-3 h-3 text-white"/></div>
+                   </div>
+                   <h3 className="font-serif italic text-2xl text-slate-800 mb-2">Your data.<br/>Your control.<br/>Our responsibility.</h3>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* WORKFLOW: 4. Live Orchestration (Dark Mode) */}
+          {currentView === "services" && workflowStep === 4 && (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white fixed inset-0 z-50">
+              <div className="w-full max-w-4xl relative">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-6 mb-10">
+                  <div>
+                    <div className="text-slate-400 text-xs mb-1.5 uppercase font-bold tracking-widest">Request ID: {txId}</div>
+                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                      Agent Orchestration 
+                      <span className="text-blue-400 text-xs font-bold uppercase tracking-wider bg-blue-900/40 border border-blue-800 px-3 py-1 rounded-full animate-pulse">(Live)</span>
+                    </h2>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-medium bg-slate-800 border border-slate-700 px-4 py-2 rounded-full text-slate-300">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400"/> Processing...
+                  </div>
+                </div>
+
+                <div className="flex">
+                  <div className="w-1/2 space-y-8 relative">
+                    <div className="absolute left-[11px] top-4 bottom-4 w-px bg-slate-800 -z-10"></div>
+                    {["Request Agent", "Routing Agent", "Data Agents", "Validation Agent", "Consent & Security Agent", "Response Agent"].map((agent, index) => {
+                      const isActive = orchestrationProgress === index;
+                      const isPast = orchestrationProgress > index;
+                      const subtexts = [
+                        "Understanding your request", "Identifying required departments", "", 
+                        "Checking data consistency", "Ensuring secure data exchange", "Preparing final response"
+                      ];
+                      
+                      return (
+                        <div key={index} className={`flex gap-5 ${isActive ? 'opacity-100' : isPast ? 'opacity-50' : 'opacity-20'} transition-opacity duration-500`}>
+                          <div className="mt-0.5 shrink-0">
+                            {isPast ? (
+                              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.4)]"><Check className="w-3 h-3 text-white"/></div>
+                            ) : isActive ? (
+                              <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.6)]"><div className="w-2 h-2 bg-white rounded-full"></div></div>
+                            ) : (
+                              <div className="w-6 h-6 rounded-full border-2 border-slate-700 bg-slate-900"></div>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className={`font-bold text-lg ${isActive ? 'text-white' : 'text-slate-300'}`}>{index + 1}. {agent}</h4>
+                            {subtexts[index] && <p className="text-sm text-slate-500 mt-1">{subtexts[index]}</p>}
+                            
+                            {index === 2 && (isActive || isPast) && (
+                              <div className="flex gap-3 mt-4">
+                                <div className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-blue-500/30 bg-blue-500/10 text-blue-400'}`}>
+                                  <User className="w-3 h-3"/> Identity {isPast ? 'Verified' : 'Verifying'}
+                                </div>
+                                <div className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'}`}>
+                                  <FileText className="w-3 h-3"/> Income {isPast ? 'Verified' : 'Verifying'}
+                                </div>
+                                <div className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-lg border flex items-center gap-1.5 ${isPast ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 bg-slate-800 text-slate-400'}`}>
+                                  <Building className="w-3 h-3"/> Property {isPast ? 'Verified' : 'Pending'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="w-1/2 flex items-center justify-center opacity-80">
+                    <div className="font-serif italic text-4xl text-center leading-relaxed text-slate-300 relative">
+                       <span className="absolute -top-8 -left-8 text-blue-500/20 text-6xl">"</span>
+                       Multiple agents.<br/>One goal.
+                       <span className="absolute -bottom-8 -right-8 text-blue-500/20 text-6xl">"</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* WORKFLOW: 5. Final Result */}
+          {currentView === "services" && workflowStep === 5 && (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 fixed inset-0 z-50">
+              <div className="bg-white rounded-3xl w-full max-w-4xl p-16 shadow-2xl relative text-center animate-in zoom-in-95 duration-500">
+                <div className="absolute top-12 left-12 font-serif italic text-2xl text-blue-900 opacity-20 text-left leading-tight">All systems <br/>in sync!</div>
+                
+                <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-blue-100 shadow-inner">
+                  <Home className="w-10 h-10 text-blue-600"/>
+                </div>
+                
+                <h2 className="text-3xl font-bold text-slate-900 mb-4">{activeScheme}</h2>
+                <div className="bg-emerald-50 text-emerald-700 px-8 py-2.5 rounded-full font-black tracking-widest uppercase text-xl mb-6 border border-emerald-200 inline-block shadow-sm">
+                  ELIGIBLE
+                </div>
+                <p className="text-sm text-slate-500 mb-12">Based on verified information from 3 government systems.</p>
+
+                <div className="flex justify-center gap-6 w-full max-w-2xl mx-auto mb-12">
+                  {[
+                    { icon: User, color: "text-blue-500 bg-blue-50 border-blue-100", label: "Identity" },
+                    { icon: FileText, color: "text-yellow-600 bg-yellow-50 border-yellow-100", label: "Income" },
+                    { icon: Building, color: "text-green-600 bg-green-50 border-green-100", label: "Property" }
+                  ].map((d, i) => (
+                    <div key={i} className="flex-1 bg-white border border-slate-200 shadow-sm rounded-2xl p-5 flex flex-col items-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border mb-3 ${d.color}`}>
+                        <d.icon className="w-5 h-5"/>
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 mb-1">{d.label}</span>
+                      <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Verified</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center w-full max-w-md mx-auto border-t border-slate-100 pt-8 mb-10">
+                   <div className="text-left">
+                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Request ID</div>
+                     <div className="text-sm font-mono font-bold text-slate-900 bg-slate-50 px-2 py-1 rounded inline-block border border-slate-200">{txId}</div>
+                   </div>
+                   <div className="text-right">
+                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Completed at</div>
+                     <div className="text-sm font-mono font-bold text-slate-900">09:43 AM • Today</div>
+                   </div>
+                </div>
+
+                <button onClick={() => {setWorkflowStep(0); setSearchQuery("");}} className="bg-slate-900 text-white px-10 py-4.5 rounded-xl font-bold hover:bg-slate-800 shadow-xl mx-auto flex items-center gap-2 transition-transform hover:scale-105">
+                  Continue to application <ArrowRight className="w-5 h-5"/>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: DEPARTMENT DASHBOARD (Admin) */}
+          {currentView === "admin" && (
+            <div className="p-8 max-w-6xl mx-auto animate-in fade-in pt-12">
+              <div className="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDashboard}</h1>
+                  <p className="text-sm text-slate-500 mt-1">Live Swarm Activity & Anomaly Detection</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-slate-400"/>
+                  <select className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer">
+                    <option>All Services (Statewide)</option>
+                    <option>Housing Scheme Eligibility</option>
+                    <option>Income Certificate</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Total Verified</div>
+                  <div className="text-4xl font-black text-slate-900">12,408</div>
+                </div>
+                <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-0 top-0 bottom-0 w-16 bg-emerald-100/50 -skew-x-12 transform translate-x-4"></div>
+                  <div className="text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2 relative z-10">Cleared by AI</div>
+                  <div className="text-4xl font-black text-emerald-800 relative z-10">92%</div>
+                </div>
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm relative overflow-hidden">
+                   <div className="absolute right-0 top-0 bottom-0 w-16 bg-red-100/50 -skew-x-12 transform translate-x-4"></div>
+                  <div className="text-red-700 text-xs font-bold uppercase tracking-wider mb-2 relative z-10">Anomalies Caught</div>
+                  <div className="text-4xl font-black text-red-800 relative z-10">142</div>
+                </div>
+                <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-0 top-0 bottom-0 w-16 bg-blue-100/50 -skew-x-12 transform translate-x-4"></div>
+                  <div className="text-blue-700 text-xs font-bold uppercase tracking-wider mb-2 relative z-10">Swarm Processing</div>
+                  <div className="text-4xl font-black text-blue-800 relative z-10">48</div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                  <h2 className="font-bold text-slate-800 flex items-center gap-2"><Database className="w-5 h-5 text-blue-600"/> Live Transaction Queue</h2>
+                  <button className="text-sm font-bold text-blue-600 hover:text-blue-800">View All →</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-white border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-bold">
+                      <tr>
+                        <th className="px-6 py-4">TXN ID</th>
+                        <th className="px-6 py-4">Applicant</th>
+                        <th className="px-6 py-4">Service Required</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {[
+                        { id: "GV-92812", name: "Ramesh Kumar", service: "Housing Scheme", status: "Cleared", sc: "text-emerald-700 bg-emerald-50 border border-emerald-100" },
+                        { id: "GV-44129", name: "John Doe", service: "Income Certificate", status: "Anomaly", sc: "text-red-700 bg-red-50 border border-red-200" },
+                        { id: "GV-11023", name: "Priya Sharma", service: "PAN Services", status: "Pending AI", sc: "text-blue-700 bg-blue-50 border border-blue-100" },
+                        { id: "GV-55821", name: "Anita Desai", service: "Housing Scheme", status: "Cleared", sc: "text-emerald-700 bg-emerald-50 border border-emerald-100" },
+                      ].map((req, i) => (
+                        <tr key={i} className={`hover:bg-slate-50 transition-colors ${req.status === 'Anomaly' ? 'bg-red-50/10' : ''}`}>
+                          <td className="px-6 py-4 font-mono font-bold text-slate-600">{req.id}</td>
+                          <td className="px-6 py-4 font-bold text-slate-900">{req.name}</td>
+                          <td className="px-6 py-4 text-slate-600 font-medium">{req.service}</td>
+                          <td className="px-6 py-4"><span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${req.sc}`}>{req.status}</span></td>
+                          <td className="px-6 py-4 text-right">
+                            <button className="text-blue-600 font-bold text-xs hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors">Review</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: AI MITRA CHAT */}
+          {currentView === "chat" && (
+            <div className="p-8 max-w-4xl mx-auto h-[calc(100vh-64px)] flex flex-col animate-in fade-in">
+              <div className="bg-white border border-slate-200 rounded-3xl shadow-sm flex flex-col flex-1 overflow-hidden">
+                
+                <div className="bg-[#002147] p-6 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white/20 shadow-lg">
+                      <MessageSquare className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-white tracking-wide text-lg">{t.aiMitra}</h2>
+                      <p className="text-[10px] text-blue-200 uppercase tracking-widest font-mono flex items-center gap-1.5 mt-0.5">
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full relative"><span className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-50"></span></span> 
+                        Active Support Agent
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setCurrentView("services")} className="text-slate-400 hover:text-white transition-colors bg-white/10 p-2 rounded-xl">
+                    <LogOut className="w-4 h-4"/>
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-8 bg-slate-50 space-y-6">
+                  <div className="text-center text-xs text-slate-400 font-medium mb-6 uppercase tracking-wider">Today</div>
+                  {messages.map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
+                      <div className={`max-w-[80%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                        msg.role === "user" ? "bg-slate-900 text-white rounded-br-sm" : "bg-white border border-slate-200 text-slate-800 rounded-bl-sm"
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start animate-in fade-in">
+                      <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-sm shadow-sm flex gap-2">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                
+                <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+                  <form onSubmit={handleSendMessage} className="flex gap-2 items-center bg-slate-50 border border-slate-200 rounded-2xl p-1.5 pr-2 focus-within:ring-2 focus-within:ring-slate-900 focus-within:bg-white transition-all shadow-sm">
+                    
+                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-slate-900 rounded-xl transition-colors bg-white border border-slate-100 shadow-sm" title="Upload Document">
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+
+                    <input 
+                      type="text" 
+                      value={chatInput} 
+                      onChange={e => setChatInput(e.target.value)} 
+                      placeholder={isRecording ? "Listening..." : "Message Sarkar Mitra..."} 
+                      className={`flex-1 bg-transparent px-3 py-3 outline-none text-sm text-slate-900 ${isRecording ? "text-red-500 font-bold" : ""}`}
+                      disabled={chatLoading}
+                    />
+
+                    <button type="button" onClick={simulateVoice} className={`p-3 rounded-xl transition-all shadow-sm border ${isRecording ? "bg-red-100 text-red-600 border-red-200 animate-pulse" : "bg-white text-slate-400 hover:text-slate-900 border-slate-100"}`} title="Voice Input">
+                      <Mic className="w-5 h-5" />
+                    </button>
+
+                    <button type="submit" disabled={!chatInput.trim() || chatLoading} className="bg-slate-900 hover:bg-slate-800 text-white p-3.5 rounded-xl transition-all disabled:opacity-50 shadow-md">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
-      </div>
-    );
-  }
-
-  // --- SCREEN 5: FINAL RESULT ---
-  if (step === 6) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <ChatWidget />
-        <div className="bg-white rounded-3xl w-full max-w-4xl p-8 md:p-16 shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-500">
-          
-          <div className="absolute top-12 left-12 hidden md:block">
-             <div className="font-serif italic text-2xl text-blue-900 opacity-20">{t.allSync}</div>
-          </div>
-
-          <div className="flex flex-col items-center text-center relative z-10">
-            <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-6 shadow-sm border border-blue-100">
-              <Home className="w-10 h-10 text-blue-600"/>
-            </div>
-            
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">{serviceContext}</h2>
-            <div className="bg-emerald-50 text-emerald-700 px-6 py-2 rounded-full font-black tracking-widest uppercase text-xl mb-4 border border-emerald-200 shadow-sm">
-              {t.eligible}
-            </div>
-            <p className="text-sm text-slate-500 mb-12 max-w-sm">Based on cryptographically verified information from 3 government systems.</p>
-
-            <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-2xl mb-12">
-              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center shadow-sm">
-                <User className="w-6 h-6 text-blue-500 mb-2"/>
-                <span className="text-xs font-bold text-slate-700">Identity</span>
-                <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1"><CheckCircle2 className="w-3 h-3"/> Verified</span>
-              </div>
-              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center shadow-sm">
-                <FileText className="w-6 h-6 text-yellow-500 mb-2"/>
-                <span className="text-xs font-bold text-slate-700">Income</span>
-                <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1"><CheckCircle2 className="w-3 h-3"/> Verified</span>
-              </div>
-              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center shadow-sm">
-                <Building className="w-6 h-6 text-green-500 mb-2"/>
-                <span className="text-xs font-bold text-slate-700">Property</span>
-                <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1"><CheckCircle2 className="w-3 h-3"/> Verified</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-12 w-full max-w-md justify-between border-t border-slate-100 pt-8 mb-8">
-               <div className="text-left">
-                 <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Request ID</div>
-                 <div className="text-sm font-mono font-semibold text-slate-900">{txId}</div>
-               </div>
-               <div className="text-right">
-                 <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Timestamp</div>
-                 <div className="text-sm font-mono font-semibold text-slate-900">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} • Today</div>
-               </div>
-            </div>
-
-            <button onClick={() => setStep(2)} className="bg-slate-900 text-white px-10 py-4 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-xl flex items-center gap-2">
-              Return to Dashboard <ArrowRight className="w-5 h-5"/>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- SCREEN 6: DEPT DASHBOARD (ADMIN VIEW) ---
-  if (step === 10) {
-    const mockRequests = [
-      { id: "TXN-88421", name: "Ramesh Kumar", srv: "Ayushman Bharat", stat: "Cleared" },
-      { id: "TXN-11234", name: "John Doe", srv: "Income Cert", stat: "Anomaly" },
-      { id: "TXN-99321", name: "Priya Sharma", srv: "PAN Card", stat: "Pending AI" },
-      { id: "TXN-77210", name: "Anita Desai", srv: "Housing Scheme", stat: "Cleared" },
-    ];
-
-    return (
-      <div className="min-h-screen bg-slate-50 flex">
-        <ChatWidget />
-        <aside className="w-64 bg-[#002147] text-slate-300 flex flex-col h-screen sticky top-0 hidden md:flex border-r border-slate-800">
-          <div className="h-1 w-full flex">
-             <div className="h-full w-1/3 bg-[#FF9933]"></div><div className="h-full w-1/3 bg-white"></div><div className="h-full w-1/3 bg-[#138808]"></div>
-          </div>
-          <div className="p-6">
-            <div className="flex items-center gap-3 text-white mb-1">
-              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#002147]"><Landmark size={18} /></div>
-              <span className="text-xl font-bold tracking-wide">SARKAR SEVA</span>
-            </div>
-            <div className="text-[10px] font-mono tracking-widest uppercase text-slate-400 pl-11">Maharashtra Govt</div>
-          </div>
-          
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30">
-              <Activity className="w-5 h-5" /> <span className="font-medium text-sm">{t.deptDash}</span>
-            </button>
-          </nav>
-          <div className="p-4 border-t border-slate-800">
-            <button onClick={() => setStep(0)} className="w-full flex items-center justify-center gap-2 py-2 text-sm text-slate-400 hover:text-white transition-colors">
-              <LogOut className="w-4 h-4" /> Sign Out
-            </button>
-          </div>
-        </aside>
-
-        <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t.deptDash}</h1>
-            <LangSelector />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-               <div className="text-slate-500 text-sm font-semibold mb-1">{t.totalReq}</div>
-               <div className="text-3xl font-black text-slate-900">4,281</div>
-             </div>
-             <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 shadow-sm">
-               <div className="text-emerald-700 text-sm font-semibold mb-1">{t.cleared}</div>
-               <div className="text-3xl font-black text-emerald-800">3,902</div>
-             </div>
-             <div className="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
-               <div className="text-red-700 text-sm font-semibold mb-1">Anomalies Detected</div>
-               <div className="text-3xl font-black text-red-800">45</div>
-             </div>
-             <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-sm">
-               <div className="text-blue-700 text-sm font-semibold mb-1">Processing Swarm</div>
-               <div className="text-3xl font-black text-blue-800">334</div>
-             </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
-             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-               <h2 className="font-bold text-slate-800 flex items-center gap-2"><Network className="w-5 h-5 text-blue-600"/> Live Agent Transaction Queue</h2>
-             </div>
-             <div className="overflow-x-auto flex-1 p-6 pt-2">
-               <table className="w-full text-left text-sm whitespace-nowrap">
-                 <thead className="text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100 font-bold">
-                   <tr>
-                     <th className="py-4">Transaction ID</th>
-                     <th className="py-4">Applicant</th>
-                     <th className="py-4">Service Type</th>
-                     <th className="py-4">Agent Status</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-slate-50">
-                   {mockRequests.map((req, idx) => (
-                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                       <td className="py-4 font-mono font-medium text-slate-600">{req.id}</td>
-                       <td className="py-4 font-bold text-slate-900">{req.name}</td>
-                       <td className="py-4 text-slate-600">{req.srv}</td>
-                       <td className="py-4">
-                         {req.stat === "Cleared" && <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit gap-1"><CheckCircle2 className="w-3 h-3"/> Cleared</span>}
-                         {req.stat === "Anomaly" && <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit gap-1"><AlertTriangle className="w-3 h-3"/> Anomaly</span>}
-                         {req.stat === "Pending AI" && <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit gap-1"><Activity className="w-3 h-3"/> Pending AI</span>}
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-             </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return null;
+      </main>
+    </div>
+  );
 }
