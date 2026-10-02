@@ -6,13 +6,23 @@ import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
   Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
-  Paperclip, Mic, Building, Users, Clock, Filter
+  Paperclip, Mic, Building, Users, Clock, Filter, RefreshCw
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydwqfjmphzfc.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// --- SECURITY UTILS ---
+// Generates an irreversible SHA-256 hash of the sensitive ID before it leaves the browser
+const generateSecureHash = async (plainTextId: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plainTextId);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 const REAL_SERVICES = [
   "Senior Citizen Registration",
@@ -123,14 +133,15 @@ export default function SarkarSevaApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // Cloudflare Turnstile State
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // CAPTCHA State
+  const [captchaCode, setCaptchaCode] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
 
-  // Workflow State
+  // Workflow State - Updated to include phone and governmentId
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ name: "", dob: "", scheme: "Ayushman Bharat Card", consent: false });
+  const [formData, setFormData] = useState({ name: "", phone: "", governmentId: "", dob: "", scheme: "Ayushman Bharat Card", consent: false });
   const [pipelineProgress, setPipelineProgress] = useState(0);
   const [activeAgent, setActiveAgent] = useState("");
   const [txId, setTxId] = useState("");
@@ -147,12 +158,19 @@ export default function SarkarSevaApp() {
   const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Register global callback for Cloudflare Turnstile
-    (window as any).onTurnstileSuccess = (token: string) => {
-      setCaptchaToken(token);
-    };
+  // Generate a secure verification CAPTCHA
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; 
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput("");
+  };
 
+  useEffect(() => {
+    generateCaptcha();
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -180,26 +198,23 @@ export default function SarkarSevaApp() {
     e.preventDefault();
     setAuthError("");
 
-    if (!captchaToken) {
-      setAuthError("Please complete the security verification challenge.");
+    // Verify CAPTCHA
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setAuthError("Incorrect CAPTCHA verification code. Please try again.");
+      generateCaptcha();
       return;
     }
 
     setAuthLoading(true);
     try {
       const { error } = authMode === "email"
-        ? await supabase.auth.signInWithOtp({ 
-            email: contact, 
-            options: { captchaToken } 
-          })
-        : await supabase.auth.signInWithOtp({ 
-            phone: contact, 
-            options: { captchaToken } 
-          });
+        ? await supabase.auth.signInWithOtp({ email: contact })
+        : await supabase.auth.signInWithOtp({ phone: contact });
       if (error) throw error;
       setOtpSent(true);
     } catch (err: any) {
       setAuthError(err.message);
+      generateCaptcha();
     } finally {
       setAuthLoading(false);
     }
@@ -235,9 +250,31 @@ export default function SarkarSevaApp() {
     workflowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const runPipeline = () => {
+  // Upgraded to handle real Database insertion
+  const runPipeline = async () => {
     setStep(3);
     setPipelineProgress(0);
+
+    try {
+      // 1. Hash the ID on the client side
+      const secureIdHash = await generateSecureHash(formData.governmentId);
+
+      // 2. Insert into Supabase (only the irreversible hash is sent)
+      const { error } = await supabase.from('citizens').insert({
+        id: session.user.id,
+        name: formData.name,
+        phone: formData.phone || contact, // Fallback to login credential if phone is empty
+        aadhaar_hash: secureIdHash 
+      });
+
+      if (error) {
+        console.error("Database Insert Failed:", error);
+      }
+    } catch (err) {
+      console.error("Hashing Error:", err);
+    }
+
+    // 3. Proceed with visual orchestration
     const agents = [
       "1. Request Agent (Intent Extraction)",
       "2. Routing Agent (API Mapping)",
@@ -370,10 +407,10 @@ export default function SarkarSevaApp() {
               </div>
 
               <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Users className="w-4 h-4"/> {t.citizenPortal}
                 </button>
-                <button onClick={() => { setLoginTab("official"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Building className="w-4 h-4"/> {t.deptOfficial}
                 </button>
               </div>
@@ -408,17 +445,34 @@ export default function SarkarSevaApp() {
                     </div>
                   </div>
 
-                  {/* CLOUDFLARE TURNSTILE WIDGET */}
+                  {/* CAPTCHA SECTION */}
                   <div className="space-y-2 pt-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Security Verification</label>
-                    <div 
-                      className="cf-turnstile" 
-                      data-sitekey="0x4AAAAAAFL-BO3Yc2FzjxaT"
-                      data-callback="onTurnstileSuccess"
-                    ></div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Security Verification</label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 select-none font-mono text-xl font-extrabold tracking-[0.3em] text-slate-800 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center shadow-inner relative overflow-hidden">
+                        <span className="line-through decoration-blue-600/70 decoration-2 italic">{captchaCode}</span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={generateCaptcha} 
+                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-all flex items-center justify-center"
+                        title="Refresh CAPTCHA"
+                      >
+                        <RefreshCw className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <input 
+                      type="text" 
+                      required 
+                      maxLength={5}
+                      placeholder="Enter the 5 characters above" 
+                      value={captchaInput} 
+                      onChange={e => setCaptchaInput(e.target.value)} 
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono uppercase tracking-widest focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
+                    />
                   </div>
 
-                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-4 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
+                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-2 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
                   </button>
                 </form>
@@ -588,10 +642,20 @@ export default function SarkarSevaApp() {
                             <input type="text" placeholder="E.g. Ramesh Kumar" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none" />
                           </div>
                           <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Phone Number</label>
+                            <input type="tel" placeholder="+91..." value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-3.5 border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-600 outline-none" />
+                          </div>
+                          <div>
                             <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Secure Govt ID</label>
                             <div className="relative">
                               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                              <input type="text" disabled value="[Aadhaar Redacted]" className="w-full pl-10 p-3.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-mono text-sm cursor-not-allowed" />
+                              <input 
+                                type="text" 
+                                placeholder="Enter 12-digit ID" 
+                                value={formData.governmentId} 
+                                onChange={e => setFormData({...formData, governmentId: e.target.value})}
+                                className="w-full pl-10 p-3.5 bg-white border border-slate-300 text-slate-900 rounded-xl font-mono text-sm focus:ring-2 focus:ring-blue-600 outline-none" 
+                              />
                             </div>
                             <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><Shield className="w-3 h-3"/> Edge-masked for strict privacy compliance.</p>
                           </div>
@@ -743,7 +807,7 @@ export default function SarkarSevaApp() {
                           </div>
                         </div>
                         
-                        <button onClick={() => { setStep(1); setFormData({name: "", dob: "", scheme: "Ayushman Bharat Card", consent: false}); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-medium transition-colors border border-slate-300">
+                        <button onClick={() => { setStep(1); setFormData({name: "", phone: "", governmentId: "", dob: "", scheme: "Ayushman Bharat Card", consent: false}); }} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-medium transition-colors border border-slate-300">
                           Start New Application
                         </button>
                       </div>
