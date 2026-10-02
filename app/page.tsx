@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Turnstile } from '@marsidev/react-turnstile';
 import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
@@ -15,8 +14,48 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ciwhmfbpydw
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_CWdbGlLgthJSW";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// --- NATIVE TURNSTILE COMPONENT (No external npm package needed) ---
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: { sitekey: string; callback: (token: string) => void; 'error-callback'?: () => void }) => string;
+      reset: (widgetId: string) => void;
+    };
+  }
+}
+
+function TurnstileWidget({ siteKey, onSuccess, onError }: { siteKey: string; onSuccess: (token: string) => void; onError?: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let scriptTag = document.getElementById("cf-turnstile-script");
+    if (!scriptTag) {
+      scriptTag = document.createElement("script");
+      scriptTag.id = "cf-turnstile-script";
+      scriptTag.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      scriptTag.async = true;
+      scriptTag.defer = true;
+      document.body.appendChild(scriptTag);
+    }
+
+    const renderWidget = () => {
+      if (window.turnstile && containerRef.current && containerRef.current.childElementCount === 0) {
+        window.turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          callback: (token: string) => onSuccess(token),
+          'error-callback': () => onError?.(),
+        });
+      }
+    };
+
+    const interval = setInterval(renderWidget, 200);
+    return () => clearInterval(interval);
+  }, [siteKey, onSuccess, onError]);
+
+  return <div ref={containerRef} className="flex justify-center my-2" />;
+}
+
 // --- SECURITY UTILS ---
-// Generates an irreversible SHA-256 hash of the sensitive ID before it leaves the browser
 const generateSecureHash = async (plainTextId: string): Promise<string> => {
   const encoder = new TextEncoder();
   const data = encoder.encode(plainTextId);
@@ -35,7 +74,6 @@ const REAL_SERVICES = [
   "Income Certificate Issuance"
 ];
 
-// Mock data for the Department Dashboard
 const MOCK_REQUESTS = [
   { id: "TXN-IND-88421", name: "Ramesh Kumar", service: "Ayushman Bharat Card", status: "Cleared", date: "2023-10-24" },
   { id: "TXN-IND-11234", name: "John Doe", service: "Income Certificate Issuance", status: "Anomaly", date: "2023-10-24" },
@@ -74,7 +112,7 @@ const TRANSLATIONS: any = {
   Kannada: {
     portalAccess: "ಅಧಿಕೃತ ಪೋರ್ಟಲ್ ಪ್ರವೇಶ", citizenPortal: "ನಾಗರಿಕ ಪೋರ್ಟಲ್", deptOfficial: "ಇಲಾಖಾ ಅಧಿಕಾರಿ",
     citizenServices: "ನಾಗರಿಕ ಸೇವೆಗಳು", deptDashboard: "ಇಲಾಖೆಯ ಮೇಲ್ವಿಚಾರಣೆ", aiMitra: "ಸರ್ಕಾರ್ ಮಿತ್ರ AI",
-    searchPlaceholder: "ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್‌‌‌‌ಗಳನ್ನು ಹುಡುಕಿ...", trending: "ಟ್ರೆಂಡಿಂಗ್ ಹುಡುಕಾಟಗಳು:", selectScheme: "ಗುರಿ ಯೋಜನೆ",
+    searchPlaceholder: "ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕೀವರ್ಡ್ಗಳನ್ನು ಹುಡುಕಿ...", trending: "ಟ್ರೆಂಡಿಂಗ್ ಹುಡುಕಾಟಗಳು:", selectScheme: "ಗುರಿ ಯೋಜನೆ",
     applicantName: "ಅರ್ಜಿದಾರರ ಪೂರ್ಣ ಹೆಸರು", proceedConsent: "ಸಮ್ಮತಿಗೆ ಮುಂದುವರಿಯಿರಿ", signOut: "ಸೈನ್ ಔಟ್",
     welcome: "ನಮಸ್ಕಾರ. ನಾನು ಸರ್ಕಾರ್ ಮಿತ್ರ, ನಿಮ್ಮ AI ಮಾರ್ಗದರ್ಶಿ. ಸರ್ಕಾರಿ ಸೇವೆಗಳೊಂದಿಗೆ ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
     askEligibility: "ಯೋಜನೆಯ ಅರ್ಹತೆಯ ಬಗ್ಗೆ ಕೇಳಿ...", nationalPortal: "ಭಾರತದ ರಾಷ್ಟ್ರೀಯ ಪೋರ್ಟಲ್"
@@ -89,7 +127,6 @@ export default function SarkarSevaApp() {
   
   const t = TRANSLATIONS[globalLang];
 
-  // Auth State
   const [loginTab, setLoginTab] = useState<"citizen" | "official">("citizen");
   const [authMode, setAuthMode] = useState<"email" | "phone">("email");
   const [contact, setContact] = useState("");
@@ -97,11 +134,8 @@ export default function SarkarSevaApp() {
   const [otpSent, setOtpSent] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
-
-  // Cloudflare Turnstile State
   const [captchaToken, setCaptchaToken] = useState<string>("");
 
-  // Workflow State (Updated to include phone and governmentId for real database insertion)
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
@@ -112,10 +146,8 @@ export default function SarkarSevaApp() {
   const workflowRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Admin Dashboard State
   const [selectedAdminFilter, setSelectedAdminFilter] = useState<string>("All Services");
 
-  // Chat State
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -158,7 +190,6 @@ export default function SarkarSevaApp() {
     setAuthLoading(true);
     try {
       const options = { captchaToken }; 
-      
       const { error } = authMode === "email"
         ? await supabase.auth.signInWithOtp({ email: contact, options })
         : await supabase.auth.signInWithOtp({ phone: contact, options });
@@ -203,14 +234,12 @@ export default function SarkarSevaApp() {
     workflowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Upgraded Pipeline with Secure Database Insertion
   const runPipeline = async () => {
     setStep(3);
     setPipelineProgress(0);
 
     try {
       const secureIdHash = await generateSecureHash(formData.governmentId);
-      
       const { error } = await supabase.from('citizens').insert({
         id: session?.user?.id,
         name: formData.name,
@@ -291,7 +320,6 @@ export default function SarkarSevaApp() {
   };
 
   const filteredServices = REAL_SERVICES.filter(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
-  
   const filteredAdminRequests = selectedAdminFilter === "All Services" 
     ? MOCK_REQUESTS 
     : MOCK_REQUESTS.filter(req => req.service === selectedAdminFilter);
@@ -306,9 +334,6 @@ export default function SarkarSevaApp() {
     }
   };
 
-  // ==========================================
-  // VIEW 0: LOGIN & AUTHENTICATION SCREEN
-  // ==========================================
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-50 flex font-sans">
@@ -318,7 +343,6 @@ export default function SarkarSevaApp() {
             <div className="h-full w-1/3 bg-white"></div>
             <div className="h-full w-1/3 bg-[#138808]"></div>
           </div>
-          
           <div className="relative z-10 flex flex-col items-start gap-4">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-[#002147] shadow-xl">
               <Landmark size={36} />
@@ -328,7 +352,6 @@ export default function SarkarSevaApp() {
               <p className="text-sm text-slate-300 font-mono tracking-widest uppercase">Government of Maharashtra</p>
             </div>
           </div>
-
           <div className="relative z-10">
             <h2 className="text-5xl font-extrabold leading-tight mb-6">
               Next-Generation<br/>GovTech Interoperability
@@ -398,14 +421,12 @@ export default function SarkarSevaApp() {
                     </div>
                   </div>
 
-                  {/* REAL CLOUDFLARE TURNSTILE WIDGET */}
-                  <div className="flex justify-center pt-2">
-                    <Turnstile 
-                      siteKey="0x4AAAAAAFL-BO3Yc2FzjxaT" 
-                      onSuccess={(token) => setCaptchaToken(token)}
-                      onError={() => setAuthError("Turnstile verification failed. Please refresh.")}
-                    />
-                  </div>
+                  {/* NATIVE TURNSTILE WIDGET */}
+                  <TurnstileWidget 
+                    siteKey="0x4AAAAAAFL-BO3Yc2FzjxaT" 
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setAuthError("Turnstile verification failed. Please refresh.")}
+                  />
 
                   <button disabled={authLoading || !captchaToken} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-4 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
@@ -432,9 +453,6 @@ export default function SarkarSevaApp() {
     );
   }
 
-  // ==========================================
-  // VIEW 1, 2, & 3: FULL AUTHENTICATED DASHBOARD
-  // ==========================================
   return (
     <div className="min-h-screen bg-slate-100 flex font-sans">
       <aside className="w-64 bg-[#002147] text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
@@ -504,7 +522,6 @@ export default function SarkarSevaApp() {
 
         <div className="flex-1 overflow-y-auto bg-slate-100">
           
-          {/* VIEW 1: CITIZEN PORTAL */}
           {currentView === "services" && (
             <div>
               <div className="bg-[#002147] text-white py-12 px-6 shadow-md relative overflow-hidden">
@@ -756,7 +773,6 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
-          {/* VIEW 2: DEPT DASHBOARD  */}
           {currentView === "admin" && (
             <div className="space-y-6 max-w-6xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -843,7 +859,6 @@ export default function SarkarSevaApp() {
             </div>
           )}
 
-          {/* VIEW 3: AI MITRA CHAT   */}
           {currentView === "chat" && (
             <div className="max-w-4xl mx-auto p-4 md:p-8 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[75vh] min-h-[500px] overflow-hidden">
@@ -883,7 +898,6 @@ export default function SarkarSevaApp() {
                 
                 <div className="p-4 bg-white border-t border-slate-200 shrink-0">
                   <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
-                    
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors" title="Upload Document">
                       <Paperclip className="w-5 h-5" />
