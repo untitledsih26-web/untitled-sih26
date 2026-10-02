@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -7,7 +6,7 @@ import {
   Landmark, Shield, LayoutDashboard, FileText, MessageSquare, LogOut,
   Activity, Send, CheckCircle2, AlertTriangle, Server, Check, Loader2,
   Lock, ChevronRight, UserCircle, Database, Network, Search, Globe, 
-  Paperclip, Mic, Building, Users, Clock, Filter, RefreshCw
+  Paperclip, Mic, Building, Users, Clock, Filter
 } from "lucide-react";
 
 // --- SUPABASE INIT ---
@@ -124,9 +123,8 @@ export default function SarkarSevaApp() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // CAPTCHA State
-  const [captchaCode, setCaptchaCode] = useState("");
-  const [captchaInput, setCaptchaInput] = useState("");
+  // Cloudflare Turnstile State
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Workflow State
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,19 +147,12 @@ export default function SarkarSevaApp() {
   const [messages, setMessages] = useState([{ role: "agent", text: TRANSLATIONS.English.welcome }]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Generate a secure verification CAPTCHA
-  const generateCaptcha = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous characters (O, 0, I, 1)
-    let code = "";
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaCode(code);
-    setCaptchaInput("");
-  };
-
   useEffect(() => {
-    generateCaptcha();
+    // Register global callback for Cloudflare Turnstile
+    (window as any).onTurnstileSuccess = (token: string) => {
+      setCaptchaToken(token);
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -189,23 +180,26 @@ export default function SarkarSevaApp() {
     e.preventDefault();
     setAuthError("");
 
-    // Verify CAPTCHA
-    if (captchaInput.trim().toUpperCase() !== captchaCode) {
-      setAuthError("Incorrect CAPTCHA verification code. Please try again.");
-      generateCaptcha();
+    if (!captchaToken) {
+      setAuthError("Please complete the security verification challenge.");
       return;
     }
 
     setAuthLoading(true);
     try {
       const { error } = authMode === "email"
-        ? await supabase.auth.signInWithOtp({ email: contact })
-        : await supabase.auth.signInWithOtp({ phone: contact });
+        ? await supabase.auth.signInWithOtp({ 
+            email: contact, 
+            options: { captchaToken } 
+          })
+        : await supabase.auth.signInWithOtp({ 
+            phone: contact, 
+            options: { captchaToken } 
+          });
       if (error) throw error;
       setOtpSent(true);
     } catch (err: any) {
       setAuthError(err.message);
-      generateCaptcha();
     } finally {
       setAuthLoading(false);
     }
@@ -376,10 +370,10 @@ export default function SarkarSevaApp() {
               </div>
 
               <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
-                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("citizen"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "citizen" ? "bg-white text-blue-800 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Users className="w-4 h-4"/> {t.citizenPortal}
                 </button>
-                <button onClick={() => { setLoginTab("official"); setOtpSent(false); generateCaptcha(); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
+                <button onClick={() => { setLoginTab("official"); setOtpSent(false); }} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${loginTab === "official" ? "bg-white text-emerald-700 shadow-sm border border-slate-200" : "text-slate-500 hover:text-slate-700"}`}>
                   <Building className="w-4 h-4"/> {t.deptOfficial}
                 </button>
               </div>
@@ -414,34 +408,17 @@ export default function SarkarSevaApp() {
                     </div>
                   </div>
 
-                  {/* CAPTCHA SECTION */}
+                  {/* CLOUDFLARE TURNSTILE WIDGET */}
                   <div className="space-y-2 pt-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Security Verification</label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-3 select-none font-mono text-xl font-extrabold tracking-[0.3em] text-slate-800 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 flex items-center justify-center shadow-inner relative overflow-hidden">
-                        <span className="line-through decoration-blue-600/70 decoration-2 italic">{captchaCode}</span>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={generateCaptcha} 
-                        className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-600 transition-all flex items-center justify-center"
-                        title="Refresh CAPTCHA"
-                      >
-                        <RefreshCw className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <input 
-                      type="text" 
-                      required 
-                      maxLength={5}
-                      placeholder="Enter the 5 characters above" 
-                      value={captchaInput} 
-                      onChange={e => setCaptchaInput(e.target.value)} 
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono uppercase tracking-widest focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all" 
-                    />
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Security Verification</label>
+                    <div 
+                      className="cf-turnstile" 
+                      data-sitekey="0x4AAAAAAFL-BO3Yc2FzjxaT"
+                      data-callback="onTurnstileSuccess"
+                    ></div>
                   </div>
 
-                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-2 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
+                  <button disabled={authLoading} className={`w-full text-white py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all disabled:opacity-70 mt-4 ${loginTab === 'official' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-[#002147] hover:bg-blue-900'}`}>
                     {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Lock className="w-4 h-4"/> Request Secure OTP</>}
                   </button>
                 </form>
